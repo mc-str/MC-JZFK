@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>我的世界雪球菜单生成器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:20px;color:#e6e6e6;min-height:100vh}
+.container{max-width:900px;margin:0 auto;background:rgba(30,30,46,.7);border-radius:16px;padding:30px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);position:relative}
+h1{text-align:center;margin-bottom:30px;color:#fff;padding-top:20px}
+.input-group{margin-bottom:20px}
+label{display:block;margin-bottom:8px;font-weight:500;color:#bbb}
+input[type=text]{width:100%;padding:12px 15px;background:rgba(20,20,36,.6);border:1px solid rgba(100,100,150,.3);border-radius:8px;color:#fff;font-size:16px;transition:all .3s}
+input[type=text]:focus{outline:none;border-color:#5e7ce0;box-shadow:0 0 0 3px rgba(94,124,224,.2)}
+.function-item{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;overflow:hidden;position:relative;min-height:60px;align-items:center;}
+.function-item > * {transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);}
+.function-index{color:#888;font-weight:bold;user-select:none;min-width:20px}
+.function-item input{flex:1}
+.move-btns{display:flex;flex-direction:column;gap:4px}
+.move-btn{width:24px;height:24px;border:none;border-radius:4px;background:rgba(40,40,66,.8);color:#bbb;font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.move-btn:hover{background:#5e7ce0;color:#fff;transform:translateY(-1px)}
+.move-btn:disabled{opacity:.4;cursor:not-allowed}
+.color-checkbox{display:none;align-items:center;gap:6px;background:rgba(40,40,66,.8);border:1px solid rgba(100,100,150,.3);border-radius:6px;padding:6px 10px;font-size:12px;color:#bbb;cursor:pointer;transition:all .2s}
+.batch-mode .color-checkbox{display:flex}
+.color-checkbox input{margin:0;width:14px;height:14px;accent-color:#5e7ce0}
+.color-checkbox:hover{background:rgba(60,60,96,.8)}
+.color-btn{padding:8px 12px;background:rgba(40,40,66,.8);border:1px solid rgba(100,100,150,.3);border-radius:8px;cursor:pointer;font-size:14px;transition:all .3s}
+.color-btn:hover{background:rgba(60,60,96,.8)}
+.palette-icon::before{content:"🎨";font-size:18px}
+.color-picker-wrapper{width:100%;margin-top:6px;display:block;}
+.color-picker-panel{max-height:0;overflow:hidden;transition:max-height 0.3s ease-in-out;background:rgba(30,30,46,.9);border:1px solid rgba(100,100,150,.3);border-radius:12px;padding:0 15px;margin-top:8px;}
+.color-picker-panel.open{padding:15px;max-height:400px;overflow-y:auto;}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.color-option{width:28px;height:28px;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer;transition:transform .2s}
+.color-option:hover{transform:scale(1.15);border-color:#fff}
+.format-option{width:28px;height:28px;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(40,40,66,.8);color:#fff;font-size:12px;font-weight:bold;transition:transform .2s}
+.format-option:hover{transform:scale(1.15);border-color:#fff}
+.btn{padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-size:16px;font-weight:500;transition:all .3s}
+.btn-add{background:linear-gradient(135deg,#4CAF50 0%,#55FF55 100%);color:#fff;margin-right:10px}
+.btn-primary{background:linear-gradient(135deg,#5e7ce0 0%,#3a5bc7 100%);color:#fff;margin-right:10px}
+.btn-success{background:linear-gradient(135deg,#4CAF50 0%,#2E7D32 100%);color:#fff}
+.btn-batch{background:linear-gradient(135deg,#FF6B6B 0%,#FF8E53 100%);color:#fff;margin-right:10px}
+.btn-batch:hover{transform:translateY(-2px);box-shadow:0 0 10px rgba(255,107,107,.4)}
+.btn-remove{background:linear-gradient(135deg,#f44336 0%,#b71c1c 100%);color:#fff;padding:8px 16px;font-size:14px}
+.btn-remove:hover{transform:translateY(-2px)}
+.preview-area{background:rgba(20,20,36,.6);border:1px solid rgba(100,100,150,.3);border-radius:12px;padding:20px;margin:20px 0;font-family:Courier New,monospace;min-height:100px;position:relative;overflow:hidden}
+.preview-selector{margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap}
+.preview-btn{padding:6px 12px;background:rgba(40,40,66,.8);border:1px solid rgba(100,100,150,.3);border-radius:6px;cursor:pointer;font-size:14px;color:#bbb;transition:all .2s}
+.preview-btn.active{background:#5e7ce0;color:#fff;border-color:#5e7ce0}
+.command-output{background:rgba(20,20,36,.6);border:1px solid rgba(100,100,150,.3);border-radius:12px;padding:20px;margin-top:20px;font-family:Courier New,monospace;white-space:pre-wrap;word-break:break-all;min-height:100px;position:relative;color:#fff}
+.command-output .char-count{position:absolute;top:8px;right:8px;font-size:11px;color:#888;}
+.placeholder-text{color:#888;font-style:italic}
+.version-badge{position:absolute;right:8px;bottom:4px;font-size:9px;color:#55ffff}
+.custom-modal{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,20,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s ease}
+.custom-modal.active{opacity:1;pointer-events:all}
+.modal-card{background:linear-gradient(135deg,rgba(26,26,46,.9),rgba(22,33,62,.9));border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:30px;min-width:300px;text-align:center;backdrop-filter:blur(10px);transform:scale(.95);transition:transform .3s ease}
+.modal-title{font-size:18px;font-weight:600;color:#fff;margin-bottom:15px}
+.modal-message{color:#bbb;margin-bottom:20px}
+.modal-btn{padding:10px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#5e7ce0,#55ffff);color:#1a1a2e;font-weight:600;cursor:pointer;transition:all .3s ease}
+.modal-btn:hover{transform:translateY(-2px);box-shadow:0 0 15px rgba(94,124,224,.5)}
+.function-item.remove-animate{opacity:0;height:0;margin-bottom:0;padding:0;transform:translateX(50px) scale(.9)}
+.batch-panel{background:rgba(20,20,36,.6);border:1px solid rgba(100,100,150,.3);border-radius:12px;padding:20px;margin-top:10px;max-height:0;overflow:hidden;opacity:0;transform:scaleY(.95);transform-origin:top;transition:max-height .4s cubic-bezier(.4,0,.2,1),opacity .4s ease,transform .4s cubic-bezier(.4,0,.2,1)}
+.batch-panel.active{max-height:500px;opacity:1;transform:scaleY(1)}
+.batch-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:15px}
+.batch-row{display:flex;align-items:center;gap:15px;margin-bottom:12px;flex-wrap:wrap}
+.batch-label{font-size:13px;color:#bbb;min-width:70px}
+.batch-input{width:70px;padding:8px;background:rgba(20,20,36,.6);border:1px solid rgba(100,100,150,.3);border-radius:6px;color:#fff;font-size:13px;text-align:center}
+.batch-color-select{display:flex;gap:6px;flex-wrap:wrap;max-width:300px}
+.batch-color-option{width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;transition:all .15s}
+.batch-color-option:hover{transform:scale(1.1);border-color:#fff}
+.batch-color-option.selected{border-color:#5e7ce0;box-shadow:0 0 8px rgba(94,124,224,.5)}
+.fade-in{animation:fadeIn .3s ease forwards}
+.fade-out{animation:fadeOut .3s ease forwards}
+#preview-content{transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);height:100%;width:100%;}
+.moving-up {animation: moveUp 0.4s ease forwards;}
+.moving-down {animation: moveDown 0.4s ease forwards;}
+.swap-item {animation: swapItem 0.4s ease forwards;}
+@keyframes moveUp {0% {transform: translateY(0);opacity:1;}50% {transform: translateY(-70px);opacity:0.7;}100% {transform: translateY(0);opacity:1;}}
+@keyframes moveDown {0% {transform: translateY(0);opacity:1;}50% {transform: translateY(70px);opacity:0.7;}100% {transform: translateY(0);opacity:1;}}
+@keyframes swapItem {0% {transform: scale(1);box-shadow:none;}50% {transform: scale(1.02);box-shadow:0 0 15px rgba(94,124,224,0.5);}100% {transform: scale(1);box-shadow:none;}}
+/* 新增版本面板样式 */
+.version-btn{position:absolute;top:15px;left:15px;padding:8px 12px;background:rgba(40,40,66,.8);border:1px solid rgba(100,100,150,.3);border-radius:6px;color:#bbb;cursor:pointer;font-size:12px;transition:all .3s ease;z-index:10;}
+.version-btn:hover{background:rgba(60,60,96,.8);color:#fff;transform:scale(1.05)}
+.version-btn.fade-out{opacity:0;transform:scale(0.9);pointer-events:none;transition:opacity .5s ease, transform .5s ease;}
+.version-panel{position:absolute;top:50px;left:15px;background:rgba(30,30,46,.9);border:1px solid rgba(100,100,150,.3);border-radius:12px;padding:15px;min-width:200px;z-index:9;opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .3s ease, transform .3s ease;}
+.version-panel.open{opacity:1;transform:translateY(0);pointer-events:all;}
+.version-panel .version-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:10px;}
+.version-panel .link-btn{display:block;width:100%;padding:6px 0;text-align:center;background:rgba(40,40,66,.8);border:1px solid rgba(100,100,150,.3);border-radius:6px;color:#bbb;font-size:12px;margin-bottom:8px;cursor:pointer;transition:all .2s ease;}
+.version-panel .link-btn:hover{background:#5e7ce0;color:#fff;transform:scale(1.02);}
+.version-panel .close-btn{background:rgba(244,67,54,.8);color:#fff;margin-top:5px;}
+.version-panel .close-btn:hover{background:rgba(244,67,54,1);}
+/* 按钮点击动画 */
+.btn-click{animation:btnClick .3s ease forwards;}
+@keyframes btnClick {0%{transform:scale(1);}50%{transform:scale(0.95);}100%{transform:scale(1);}}
+@media (max-width:768px){
+.container{padding:20px}
+.batch-input{width:60px;font-size:12px}
+.batch-label{min-width:60px;font-size:12px}
+.version-btn{font-size:11px;padding:6px 10px}
+.version-panel{min-width:180px;padding:12px}
+}
+@media (max-width:480px){
+.container{padding:15px}
+.batch-input{width:55px;font-size:11px}
+.batch-label{min-width:50px;font-size:11px}
+.version-btn{font-size:10px;padding:5px 8px}
+.version-panel{min-width:160px;padding:10px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <!-- 新增左上角版本按钮和面板 -->
+    <button class="version-btn" id="versionBtn">关于</button>
+    <div class="version-panel" id="versionPanel">
+        <div class="version-title">当前版本: V1.5</div>
+        <button class="link-btn" onclick="openLink('https://qun.qq.com/universal-share/share?ac=1&authKey=Az7bGqkikq3OLjCX7qVZeioAsdV1sQltNlUKfRIjMn3Hd%2FmPWjH9KEiGzST38U6X&busi_data=eyJncm91cENvZGUiOiIxOTIxNTQ1MDUiLCJ0b2tlbiI6Im5DM0htZk9pVHlka0dDRTFkT3BGRDRJWEJtaDVQVHR6TEp4b2lDWkw5UjU1VXdHZlB2VWdtUk9SM1dndVd3YXoiLCJ1aW4iOiIzMTQ4NzA1ODQ2In0%3D&data=bESNNncJOJxUwdO2pDnYMTtxybI-Rvo-gKqZBUnRYHjnE4KQgiLbYuCpKYW3cvXnYn81IWVMwGKbx6kSF2p3MQ&svctype=4&tempid=h5_group_info'):">跳转群聊</button>
+        <button class="link-btn" onclick="openLink('https://pd.qq.com/s/fxi6phyjw?b=9')">跳转频道</button>
+        <button class="link-btn" onclick="openLink('https://b23.tv/ZHsDNCQ')">开发者B站</button>
+        <button class="link-btn close-btn" onclick="closeVersionPanel()">关闭面板</button>
+    </div>
+
+    <h1>我的世界雪球菜单生成器</h1>
+    <div class="input-group">
+        <label for="scoreboard">记分板名称：</label>
+        <input type="text" id="scoreboard" placeholder="例如：雪球菜单" value="雪球菜单"/>
+    </div>
+    <div class="input-group">
+        <label for="title">菜单标题：</label>
+        <input type="text" id="title" placeholder="例如：§e§l=== 主菜单 ===" value="§e§l=== 主菜单 ==="/>
+    </div>
+    <div class="input-group">
+        <label>功能列表：</label>
+        <div id="functions-list"></div>
+        <div class="batch-panel" id="batchPanel">
+            <div class="batch-title">批量操作</div>
+            <div class="batch-row">
+                <span class="batch-label">添加个数：</span>
+                <input type="number" class="batch-input" id="addCount" min="1" max="20" value="1" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+                <button class="btn btn-batch" onclick="batchAdd()">添加</button>
+            </div>
+            <div class="batch-row">
+                <span class="batch-label">删除个数：</span>
+                <input type="number" class="batch-input" id="delCount" min="1" max="20" value="1" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+                <button class="btn btn-batch" onclick="batchDelete()">删除</button>
+            </div>
+            <div class="batch-row">
+                <span class="batch-label">选择颜色：</span>
+                <div class="batch-color-select" id="batchColorSelect"></div>
+            </div>
+            <div class="batch-row">
+                <button class="btn btn-batch" onclick="applyBatchColor()">应用修改颜色</button>
+                <button class="btn btn-batch" onclick="closeBatchPanel()">关闭面板</button>
+            </div>
+        </div>
+        <div class="function-controls">
+            <button class="btn btn-add" onclick="addFunction()">+ 添加功能</button>
+            <button class="btn btn-batch" onclick="toggleBatchPanel()">⚡ 批量操作</button>
+        </div>
+    </div>
+    <div class="input-group">
+        <label for="ending">结尾提示：</label>
+        <input type="text" id="ending" placeholder="例如：§7抬头确认 §8| §7低头取消" value="§7抬头确认 §8| §7低头取消"/>
+    </div>
+    <div class="preview-area">
+        <strong>预览效果：</strong>
+        <div class="preview-selector" id="preview-selector"></div>
+        <div id="preview-content"></div>
+        <div class="version-badge">V1.5 腾讯频道：MCCBCOMM73</div>
+    </div>
+    <button class="btn btn-primary" onclick="generateCommand()">生成指令</button>
+    <button class="btn btn-success" onclick="copyCommand()">📋 复制指令</button>
+    <div class="command-output">
+        <span class="placeholder-text">点击"生成指令"后，可一键复制</span>
+        <div id="command-content" style="display:none;"></div>
+        <div class="char-count" id="charCount"></div>
+    </div>
+</div>
+<div class="custom-modal" id="customModal">
+    <div class="modal-card">
+        <div class="modal-title" id="modalTitle">提示</div>
+        <div class="modal-message" id="modalMessage">这是一个自定义弹窗</div>
+        <button class="modal-btn" onclick="closeModal()">确认</button>
+    </div>
+</div>
+<script>
+const colorMap={'§0':'#000000','§1':'#0000AA','§2':'#00AA00','§3':'#00AAAA','§4':'#AA0000','§5':'#AA00AA','§6':'#FFAA00','§7':'#AAAAAA','§8':'#555555','§9':'#5555FF','§a':'#55FF55','§b':'#55FFFF','§c':'#FF5555','§d':'#FF55FF','§e':'#FFFF55','§f':'#FFFFFF','§g':'#DDD605','§h':'#E3D4D1','§i':'#CECACA','§j':'#443A3B','§m':'#971607','§n':'#B4684D','§p':'#DEB12D','§q':'#47A036','§s':'#2CBAA8','§t':'#21497B','§u':'#9A5CC6'};
+const formatCodes = ['§l', '§o', '§k'];
+const colorCodes = Object.keys(colorMap);
+let previewIndex = 0;
+let selectedColorCode = '§e';
+const modal = document.getElementById('customModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalMessage = document.getElementById('modalMessage');
+const versionBtn = document.getElementById('versionBtn');
+const versionPanel = document.getElementById('versionPanel');
+
+function openModal(title, message) {
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    modal.classList.remove('active');
+}
+
+// 新增版本面板控制
+function toggleVersionPanel() {
+    versionPanel.classList.toggle('open');
+    if(versionPanel.classList.contains('open')){
+        versionBtn.classList.add('fade-out');
+    }else{
+        versionBtn.classList.remove('fade-out');
+    }
+    // 按钮点击动画
+    versionBtn.classList.add('btn-click');
+    setTimeout(()=>{
+        versionBtn.classList.remove('btn-click');
+    },300);
+}
+versionBtn.addEventListener('click', toggleVersionPanel);
+
+// 新增关闭面板并恢复按钮
+function closeVersionPanel() {
+    versionPanel.classList.remove('open');
+    versionBtn.classList.remove('fade-out');
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+// 新增链接跳转
+function openLink(url) {
+    window.open(url, '_blank');
+    // 链接按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function toggleBatchPanel() {
+    const panel = document.getElementById('batchPanel');
+    const list = document.getElementById('functions-list');
+    const isActive = panel.classList.contains('active');
+    if (isActive) {
+        panel.classList.remove('active');
+        list.classList.remove('batch-mode');
+    } else {
+        panel.classList.add('active');
+        list.classList.add('batch-mode');
+    }
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function closeBatchPanel() {
+    toggleBatchPanel();
+}
+
+function initBatchColorSelect() {
+    const container = document.getElementById('batchColorSelect');
+    container.innerHTML = '';
+    Object.entries(colorMap).forEach(([code, color]) => {
+        const div = document.createElement('div');
+        div.className = 'batch-color-option';
+        div.style.backgroundColor = color;
+        div.title = code;
+        div.onclick = function () {
+            document.querySelectorAll('.batch-color-option').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+            selectedColorCode = code;
+        };
+        container.appendChild(div);
+    });
+    const resetDiv = document.createElement('div');
+    resetDiv.className = 'batch-color-option';
+    resetDiv.style.background = 'linear-gradient(45deg,#666 25%,#999 25%,#999 50%,#666 50%,#666 75%,#999 75%)';
+    resetDiv.style.backgroundSize = '8px 8px';
+    resetDiv.title = '§r (插入格式重置符)';
+    resetDiv.onclick = function () {
+        document.querySelectorAll('.batch-color-option').forEach(el => el.classList.remove('selected'));
+        resetDiv.classList.add('selected');
+        selectedColorCode = '§r';
+    };
+    container.appendChild(resetDiv);
+    container.firstChild.classList.add('selected');
+}
+
+function batchAdd() {
+    const count = parseInt(document.getElementById('addCount').value) || 0;
+    if (!count) {
+        openModal('提示', '添加个数不能为空');
+        return;
+    }
+    if (count < 1 || count > 20) {
+        openModal('提示', '请输入1-20之间的整数');
+        return;
+    }
+    const list = document.getElementById('functions-list');
+    const base = list.children.length;
+    for (let i = 0; i < count; i++) {
+        const newItem = createFunctionItem(`功能${base + i + 1}`);
+        newItem.style.opacity = '0';
+        newItem.style.transform = 'translateY(10px)';
+        list.appendChild(newItem);
+        requestAnimationFrame(() => {
+            newItem.style.transition = 'opacity .3s ease, transform .3s ease';
+            newItem.style.opacity = '1';
+            newItem.style.transform = 'translateY(0)';
+        });
+    }
+    updateIndices();
+    updatePreviewSelector();
+    updatePreview();
+    openModal('成功', `已添加 ${count} 个功能`);
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function batchDelete() {
+    const count = parseInt(document.getElementById('delCount').value) || 0;
+    const items = document.querySelectorAll('.function-item');
+    if (items.length === 0) {
+        openModal('提示', '无可删除的功能');
+        return;
+    }
+    if (!count) {
+        openModal('提示', '删除个数不能为空');
+        return;
+    }
+    if (count < 1 || count > items.length) {
+        openModal('提示', `只能删除1-${items.length}个功能`);
+        return;
+    }
+    for (let i = 0; i < count; i++) {
+        const lastItem = items[items.length - 1 - i];
+        lastItem.style.transition = 'opacity .3s ease, transform .3s ease, height .3s ease, margin .3s ease';
+        lastItem.style.opacity = '0';
+        lastItem.style.transform = 'translateX(50px) scale(.9)';
+        lastItem.style.height = '0';
+        lastItem.style.marginBottom = '0';
+        setTimeout(() => lastItem.remove(), 300);
+    }
+    setTimeout(() => {
+        updateIndices();
+        updatePreviewSelector();
+        updatePreview();
+    }, 350);
+    openModal('成功', `已删除 ${count} 个功能`);
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function handleResetCode(text) {
+    const parts = text.split('§r');
+    if (parts.length <= 1) return text;
+    const content = parts.join('');
+    return content + '§r';
+}
+
+function applyBatchColor() {
+    const checkboxes = document.querySelectorAll('.function-item input[type="checkbox"]:checked');
+    if (checkboxes.length === 0) {
+        openModal('提示', '请先勾选要设置颜色的功能');
+        return;
+    }
+    checkboxes.forEach(cb => {
+        const input = cb.closest('.function-item').querySelector('.function-input');
+        if (selectedColorCode === '§r') {
+            input.value = handleResetCode(input.value + '§r');
+        } else {
+            const { formats, color, text } = getFormatAndColor(input.value);
+            input.value = formats.join('') + selectedColorCode + text;
+        }
+        input.value = normalizeFormat(input.value);
+    });
+    updatePreview();
+    openModal('成功', `已为选中的 ${checkboxes.length} 个功能设置颜色/插入重置符`);
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function cleanFormat(text) {
+    const codeRegex = /§[0-9a-z]/gi;
+    return text.replace(codeRegex, '');
+}
+
+function getFormatAndColor(text) {
+    let formats = new Set();
+    let color = '';
+    let pureText = '';
+    const parts = text.split(/(§[0-9a-z])/gi);
+    for (let part of parts) {
+        if (part.startsWith('§')) {
+            const code = part;
+            if (formatCodes.includes(code)) {
+                formats.add(code);
+            } else if (colorCodes.includes(code)) {
+                color = code;
+            }
+        } else {
+            pureText += part;
+        }
+    }
+    return {
+        formats: Array.from(formats),
+        color: color,
+        text: pureText
+    };
+}
+
+function normalizeFormat(text) {
+    if (text === '') return '';
+    const { formats, color, text: pureText } = getFormatAndColor(text);
+    let result = '';
+    formats.forEach(fmt => result += fmt);
+    if (color) result += color;
+    result += pureText;
+    return result;
+}
+
+function moveFunction(btn, direction) {
+    const item = btn.closest('.function-item');
+    const list = document.getElementById('functions-list');
+    const allItems = [...list.children];
+    const index = allItems.indexOf(item);
+    let targetItem;
+    if (direction === -1 && index > 0) {
+        targetItem = allItems[index - 1];
+        item.classList.add('moving-up');
+        targetItem.classList.add('swap-item');
+    } else if (direction === 1 && index < allItems.length - 1) {
+        targetItem = allItems[index + 1];
+        item.classList.add('moving-down');
+        targetItem.classList.add('swap-item');
+    } else {
+        return;
+    }
+    setTimeout(() => {
+        if (direction === -1) {
+            list.insertBefore(item, targetItem);
+        } else {
+            list.insertBefore(targetItem, item);
+        }
+        item.classList.remove('moving-up', 'moving-down');
+        targetItem.classList.remove('swap-item');
+        updateIndices();
+        updatePreview();
+    }, 400);
+    // 按钮点击动画
+    btn.classList.add('btn-click');
+    setTimeout(()=>{
+        btn.classList.remove('btn-click');
+    },300);
+}
+
+function initColorGrid(panel, input) {
+    const grid = panel.querySelector('.color-grid');
+    grid.innerHTML = '';
+    Object.entries(colorMap).forEach(([code, color]) => {
+        const div = document.createElement('div');
+        div.className = 'color-option';
+        div.style.backgroundColor = color;
+        div.title = code;
+        div.onclick = () => {
+            const { formats, text } = getFormatAndColor(input.value);
+            input.value = normalizeFormat(formats.join('') + code + text);
+            panel.classList.remove('open');
+            updatePreview();
+            // 颜色选项点击动画
+            div.classList.add('btn-click');
+            setTimeout(()=>{
+                div.classList.remove('btn-click');
+            },300);
+        };
+        grid.appendChild(div);
+    });
+
+    const formatConfig = [
+        { code: '§l', label: 'L', title: '加粗' },
+        { code: '§o', label: 'O', title: '斜体' },
+        { code: '§k', label: 'K', title: '混淆' },
+        { code: '§r', label: 'R', title: '插入格式重置符' }
+    ];
+
+    formatConfig.forEach(fmt => {
+        const div = document.createElement('div');
+        div.className = 'format-option';
+        div.textContent = fmt.label;
+        div.title = fmt.title;
+        div.onclick = () => {
+            if (fmt.code === '§r') {
+                input.value = handleResetCode(input.value + '§r');
+            } else {
+                const { formats, color, text } = getFormatAndColor(input.value);
+                const newFormats = new Set(formats);
+                newFormats.has(fmt.code) ? newFormats.delete(fmt.code) : newFormats.add(fmt.code);
+                input.value = Array.from(newFormats).join('') + color + text;
+            }
+            panel.classList.remove('open');
+            updatePreview();
+            // 格式选项点击动画
+            div.classList.add('btn-click');
+            setTimeout(()=>{
+                div.classList.remove('btn-click');
+            },300);
+        };
+        grid.appendChild(div);
+    });
+}
+
+function toggleColorPicker(event) {
+    event.stopPropagation();
+    const btn = event.target.closest('.color-btn');
+    const item = btn.closest('.function-item');
+    const panel = item.querySelector('.color-picker-panel');
+    const allPanels = document.querySelectorAll('.color-picker-panel');
+    allPanels.forEach(p => p !== panel && p.classList.remove('open'));
+    panel.classList.toggle('open');
+    // 按钮点击动画
+    btn.classList.add('btn-click');
+    setTimeout(()=>{
+        btn.classList.remove('btn-click');
+    },300);
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.color-picker-panel').forEach(panel => panel.classList.remove('open'));
+});
+
+function createFunctionItem(text = '新功能') {
+    const idx = document.querySelectorAll('.function-item').length + 1;
+    const item = document.createElement('div');
+    item.className = 'function-item';
+    item.innerHTML = `
+        <span class="function-index">${idx}.</span>
+        <input type="text" class="function-input" placeholder="功能名称" value="${text}"/>
+        <div class="move-btns">
+            <button class="move-btn" onclick="moveFunction(this,-1)" title="上移">▲</button>
+            <button class="move-btn" onclick="moveFunction(this,1)" title="下移">▼</button>
+        </div>
+        <button class="color-btn palette-icon" onclick="toggleColorPicker(event)"></button>
+        <button class="btn btn-remove" onclick="removeFunction(this)">删除</button>
+        <label class="color-checkbox" title="选择此功能进行批量操作">
+            <input type="checkbox">
+            <span>选</span>
+        </label>
+        <div class="color-picker-wrapper">
+            <div class="color-picker-panel">
+                <div class="color-grid"></div>
+            </div>
+        </div>
+    `;
+    const input = item.querySelector('.function-input');
+    const panel = item.querySelector('.color-picker-panel');
+    initColorGrid(panel, input);
+    input.addEventListener('input', function () {
+        this.value = normalizeFormat(this.value);
+        updatePreview();
+    });
+    return item;
+}
+
+function addFunction() {
+    const newItem = createFunctionItem();
+    newItem.style.opacity = '0';
+    newItem.style.transform = 'translateY(10px)';
+    document.getElementById('functions-list').appendChild(newItem);
+    requestAnimationFrame(() => {
+        newItem.style.transition = 'opacity .3s ease, transform .3s ease';
+        newItem.style.opacity = '1';
+        newItem.style.transform = 'translateY(0)';
+    });
+    updateIndices();
+    updatePreviewSelector();
+    updatePreview();
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function removeFunction(btn) {
+    const item = btn.closest('.function-item');
+    item.style.transition = 'opacity .3s ease, transform .3s ease, height .3s ease, margin .3s ease';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(50px) scale(.9)';
+    item.style.height = '0';
+    item.style.marginBottom = '0';
+    setTimeout(() => {
+        item.remove();
+        updateIndices();
+        updatePreviewSelector();
+        updatePreview();
+    }, 300);
+    // 按钮点击动画
+    btn.classList.add('btn-click');
+    setTimeout(()=>{
+        btn.classList.remove('btn-click');
+    },300);
+}
+
+function updateIndices() {
+    document.querySelectorAll('.function-item').forEach((item, i) => {
+        item.querySelector('.function-index').textContent = `${i + 1}.`;
+        const upBtn = item.querySelector('.move-btn:first-child');
+        const downBtn = item.querySelector('.move-btn:last-child');
+        upBtn.disabled = i === 0;
+        downBtn.disabled = i === document.querySelectorAll('.function-item').length - 1;
+    });
+}
+
+function updatePreviewSelector() {
+    const selector = document.getElementById('preview-selector');
+    selector.innerHTML = '';
+    const count = document.querySelectorAll('.function-item').length;
+    for (let i = 0; i < count; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'preview-btn';
+        btn.textContent = i + 1;
+        btn.onclick = () => {
+            previewIndex = i;
+            updatePreview();
+            // 预览按钮点击动画
+            btn.classList.add('btn-click');
+            setTimeout(()=>{
+                btn.classList.remove('btn-click');
+            },300);
+        };
+        selector.appendChild(btn);
+    }
+    count > 0 && selector.children[previewIndex]?.classList.add('active');
+}
+
+function parseColor(text) {
+    const styles = {
+        '§0': 'color:#000000', '§1': 'color:#0000AA', '§2': 'color:#00AA00', '§3': 'color:#00AAAA', '§4': 'color:#AA0000', '§5': 'color:#AA00AA',
+        '§6': 'color:#FFAA00', '§7': 'color:#AAAAAA', '§8': 'color:#555555', '§9': 'color:#5555FF', '§a': 'color:#55FF55', '§b': 'color:#55FFFF',
+        '§c': 'color:#FF5555', '§d': 'color:#FF55FF', '§e': 'color:#FFFF55', '§f': 'color:#FFFFFF', '§l': 'font-weight:bold', '§o': 'font-style:italic',
+        '§k': 'letter-spacing:2px;', '§r': '',
+        '§g':'color:#DDD605','§h':'color:#E3D4D1','§i':'color:#CECACA','§j':'#443A3B','§m':'color:#971607','§n':'color:#B4684D',
+        '§p':'color:#DEB12D','§q':'color:#47A036','§s':'color:#2CBAA8','§t':'color:#21497B','§u':'color:#9A5CC6'
+    };
+    let currentStyle = '';
+    let result = '';
+    const parts = text.split(/(§[0-9a-z])/gi);
+    parts.forEach(part => {
+        if (part.startsWith('§')) {
+            const code = part;
+            if (code === '§r') {
+                currentStyle = '';
+            } else if (styles[code]) {
+                if (formatCodes.includes(code)) {
+                    !currentStyle.includes(styles[code]) && (currentStyle += styles[code] + ';');
+                } else {
+                    currentStyle = styles[code] + ';' + currentStyle.replace(/color:[^;]+;/g, '');
+                }
+            }
+        } else if (part.trim() !== '') {
+            result += `<span style="${currentStyle}">${part.replace(/\n/g, '<br>')}</span>`;
+        }
+    });
+    return result || text;
+}
+
+function updatePreview() {
+    const previewContent = document.getElementById('preview-content');
+    previewContent.style.opacity = 0;
+    previewContent.style.transform = 'translateY(5px)';
+    setTimeout(() => {
+        const title = document.getElementById('title').value;
+        const funcs = [...document.querySelectorAll('.function-input')].map(i => i.value);
+        const ending = document.getElementById('ending').value;
+        let html = parseColor(title) + '<br>';
+        funcs.forEach((f, i) => {
+            html += i === previewIndex ? parseColor(f) + '<br>' : parseColor(`§f${cleanFormat(f)}`) + '<br>';
+        });
+        html += parseColor(ending);
+        previewContent.innerHTML = html;
+        previewContent.style.opacity = 1;
+        previewContent.style.transform = 'translateY(0)';
+    }, 150);
+    document.querySelectorAll('.preview-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === previewIndex);
+    });
+}
+
+// 新增生成指令字符计数
+function generateCommand() {
+    const scoreboard = document.getElementById('scoreboard').value;
+    const title = document.getElementById('title').value;
+    const funcs = [...document.querySelectorAll('.function-input')].map(i => i.value);
+    const ending = document.getElementById('ending').value;
+    let raw = ['{"rawtext":['];
+    raw.push(`{"text":"${title.replace(/"/g, '\\"')}\\n"}`);
+    funcs.forEach((txt, idx) => {
+        const score = idx + 1;
+        const hi = txt;
+        const nr = cleanFormat(txt);
+        raw.push(`,{"translate":"%%2","with":{"rawtext":[{"selector":"@s[scores={${scoreboard}=${score}}]"},{"text":"${hi.replace(/"/g, '\\"')}\\n"},{"text":"§f${nr.replace(/"/g, '\\"')}\\n"}]}}`);
+    });
+    raw.push(`,{"text":"${ending.replace(/"/g, '\\"')}"}`);
+    raw.push(']}');
+    const cmd = `/execute as @a[scores={${scoreboard}=1..${funcs.length}}] run titleraw @s actionbar ` + raw.join('');
+    document.querySelector('.placeholder-text').style.display = 'none';
+    const box = document.getElementById('command-content');
+    box.style.display = 'block';
+    box.textContent = cmd;
+    // 计算并显示字符数
+    const charCount = cmd.length;
+    document.getElementById('charCount').textContent = `总字符数: ${charCount}`;
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function copyCommand() {
+    const cmd = document.getElementById('command-content').textContent;
+    if (!cmd) {
+        openModal('提示', '请先点击生成指令！');
+        return;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(cmd).then(() => openModal('成功', '指令已复制到剪贴板！')).catch(() => fallbackCopy(cmd));
+    } else {
+        fallbackCopy(cmd);
+    }
+    // 按钮点击动画
+    event.target.classList.add('btn-click');
+    setTimeout(()=>{
+        event.target.classList.remove('btn-click');
+    },300);
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
+        const ok = document.execCommand('copy');
+        ok ? openModal('成功', '指令已复制到剪贴板！') : (() => { throw 0; })();
+    } catch (e) {
+        prompt('请长按框内文字并复制：', text);
+    }
+    document.body.removeChild(ta);
+}
+
+initBatchColorSelect();
+const list = document.getElementById('functions-list');
+list.appendChild(createFunctionItem('回城'));
+list.appendChild(createFunctionItem('商店'));
+updateIndices();
+updatePreviewSelector();
+updatePreview();
+</script>
+</body>
+</html>
