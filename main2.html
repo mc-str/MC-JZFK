@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>动态雪球菜单生成器</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --panel-bg: #ffffff;
+            --text-color: #212529;
+            --light-text: #6c757d;
+            --border-color: #dee2e6;
+            --highlight-color: #2c3e50;
+            --active-tab-bg: #2c3e50;
+            --active-tab-text: #ffffff;
+            --btn-primary-bg: #2c3e50;
+            --btn-primary-hover: #1a252f;
+            --btn-secondary-bg: #e9ecef;
+            --btn-secondary-hover: #dee2e6;
+            --btn-copy-bg: #17a2b8;
+            --btn-copy-hover: #138496;
+            --btn-danger-bg: #dc3545;
+            --btn-danger-hover: #bb2d3b;
+            --input-bg: #ffffff;
+            --input-focus-bg: #ffffff;
+            --frame-bg: #f8f9fa;
+            --frame-item-bg: #ffffff;
+            --shadow: 0 2px 4px rgba(0,0,0,0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .dark-mode {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --light-text: #9e9e9e;
+            --border-color: #333333;
+            --highlight-color: #bb86fc;
+            --active-tab-bg: #bb86fc;
+            --active-tab-text: #121212;
+            --btn-primary-bg: #bb86fc;
+            --btn-primary-hover: #9d65d0;
+            --btn-secondary-bg: #2c2c2c;
+            --btn-secondary-hover: #383838;
+            --btn-copy-bg: #03dac6;
+            --btn-copy-hover: #02bfa5;
+            --btn-danger-bg: #cf6679;
+            --btn-danger-hover: #b24c5e;
+            --input-bg: #2c2c2c;
+            --input-focus-bg: #2c2c2c;
+            --frame-bg: #1e1e1e;
+            --frame-item-bg: #2c2c2c;
+            --shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Microsoft YaHei', monospace;
+            transition: var(--transition);
+        }
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 16px;
+            line-height: 1.5;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header h1 {
+            font-size: clamp(1.4rem, 4vw, 1.8rem);
+            font-weight: 600;
+            color: var(--highlight-color);
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .header .version {
+            font-size: clamp(0.75rem, 2vw, 0.85rem);
+            color: var(--light-text);
+        }
+        .theme-container {
+            text-align: right;
+            margin-bottom: 16px;
+        }
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            border-radius: 9999px;
+            background: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #ffd700;
+            box-shadow: 0 0 10px #ffd700, 0 0 20px rgba(255,215,0,0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+        .theme-toggle::after {
+            content: '☀️';
+            position: absolute;
+            top: 50%;
+            left: 8px;
+            transform: translateY(-50%);
+            font-size: 14px;
+            z-index: 2;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .dark-mode .theme-toggle {
+            background: #2d2d2d;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .dark-mode .theme-toggle::before {
+            left: calc(100% - 28px);
+            background: #f8f9fa;
+            box-shadow: 0 0 10px #f8f9fa, 0 0 20px rgba(248,249,250,0.3);
+        }
+        .dark-mode .theme-toggle::after {
+            content: '🌙';
+            left: calc(100% - 24px);
+            color: #f8f9fa;
+        }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .tab {
+            padding: 8px clamp(8px, 2vw, 16px);
+            background: var(--btn-secondary-bg);
+            color: var(--text-color);
+            border: none;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .tab:hover {
+            background: var(--btn-secondary-hover);
+        }
+        .tab.active {
+            background: var(--active-tab-bg);
+            color: var(--active-tab-text);
+        }
+        .panel {
+            display: none;
+            padding: clamp(16px, 3vw, 24px);
+            background: var(--panel-bg);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        .panel.active {
+            display: block;
+            animation: fade 0.3s ease;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: var(--light-text);
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2);
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        .range-picker {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .range-picker input {
+            flex: 1;
+            min-width: 60px;
+        }
+        .frame-list {
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--frame-bg);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        .frame-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--frame-item-bg);
+            border-left: 2px solid var(--highlight-color);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .frame-item:last-child {
+            margin-bottom: 0;
+        }
+        .frame-item:hover {
+            background: var(--btn-secondary-hover);
+        }
+        .frame-item textarea {
+            background: transparent;
+            border: none;
+            padding: 8px 0;
+            min-height: 40px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 2vw, 0.85rem);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        .btn-primary {
+            background: var(--btn-primary-bg);
+            color: var(--active-tab-text);
+        }
+        .btn-primary:hover {
+            background: var(--btn-primary-hover);
+        }
+        .btn-danger {
+            background: var(--btn-danger-bg);
+            color: #ffffff;
+        }
+        .btn-danger:hover {
+            background: var(--btn-danger-hover);
+        }
+        .btn-copy {
+            background: var(--btn-copy-bg);
+            color: #ffffff;
+        }
+        .btn-copy:hover {
+            background: var(--btn-copy-hover);
+        }
+        .preview-box {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--frame-bg);
+            border-radius: 4px;
+            min-height: 60px;
+            white-space: pre-wrap;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            border: 1px solid var(--border-color);
+        }
+        .output-group {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .output-box {
+            width: 100%;
+        }
+        .output-textarea {
+            min-height: 120px;
+            font-family: 'Consolas', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .option-edit {
+            padding: 16px;
+            margin-bottom: 12px;
+            background: var(--frame-bg);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .func-item {
+            padding: 16px;
+            margin-bottom: 12px;
+            background: var(--frame-bg);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .func-item h4 {
+            color: var(--highlight-color);
+            margin-bottom: 12px;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+            font-weight: 500;
+        }
+        .full-command-area {
+            margin-top: 20px;
+            padding: clamp(16px, 3vw, 20px);
+            background: var(--frame-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .full-command-area h3 {
+            color: var(--highlight-color);
+            margin-bottom: 12px;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            font-weight: 500;
+        }
+        .full-command-textarea {
+            min-height: 300px;
+            font-family: 'Consolas', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .copy-tip {
+            color: #28a745;
+            font-size: clamp(0.7rem, 2vw, 0.8rem);
+            margin-top: 4px;
+            display: none;
+        }
+        .exec-option-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .exec-option-item:last-child {
+            border-bottom: none;
+        }
+        .exec-option-item h5 {
+            margin-bottom: 8px;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: var(--highlight-color);
+        }
+        .exec-type-switch {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .exec-type-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: var(--btn-secondary-bg);
+            color: var(--text-color);
+            border: none;
+            flex-shrink: 0;
+        }
+        .exec-type-btn.active {
+            background: var(--btn-primary-bg);
+            color: var(--active-tab-text);
+        }
+        .exec-coords-group, .exec-custom-group {
+            display: none;
+        }
+        .exec-type-coords .exec-coords-group {
+            display: block;
+        }
+        .exec-type-custom .exec-custom-group {
+            display: block;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--light-text);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>动态雪球菜单生成器</h1>
+            <div class="version">基岩版 | v1.0</div>
+        </div>
+        <div class="theme-container">
+            <button class="theme-toggle" onclick="toggleDarkMode()"></button>
+        </div>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('base')">基础配置</button>
+            <button class="tab" onclick="switchTab('optionEdit')">选项编辑</button>
+            <button class="tab" onclick="switchTab('funcAnim')">选择动画</button>
+            <button class="tab" onclick="switchTab('openAnim')">开屏动画</button>
+            <button class="tab" onclick="switchTab('closeAnim')">关闭动画</button>
+            <button class="tab" onclick="switchTab('funcExec')">执行指令</button>
+            <button class="tab" onclick="switchTab('preview')">预览生成</button>
+        </div>
+        <div class="panel active" id="base">
+            <div class="form-group">
+                <label>菜单积分板名称（不可含空格）</label>
+                <input type="text" id="menuScoreboard" value="menu" placeholder="例如：menu" oninput="this.value=this.value.replace(/\s/g,'')">
+            </div>
+            <div class="form-group">
+                <label>动画积分板名称（不可含空格）</label>
+                <input type="text" id="timeScoreboard" value="time" placeholder="例如：time" oninput="this.value=this.value.replace(/\s/g,'')">
+            </div>
+            <div class="form-group">
+                <label>功能选项数量（1-10）</label>
+                <input type="number" id="funcCount" value="6" min="1" max="10" onchange="updateFuncOptions()">
+            </div>
+            <button class="btn-primary" onclick="updateFuncOptions()">更新选项配置</button>
+        </div>
+        <div class="panel" id="optionEdit">
+            <div id="optionEditContainer">
+                <p style="color: var(--light-text); text-align: center; padding: 20px;">请先在【基础配置】设置选项数量并点击更新</p>
+            </div>
+        </div>
+        <div class="panel" id="funcAnim">
+            <div class="form-group">
+                <label>全局选择动画积分范围（最多8帧）</label>
+                <div class="range-picker">
+                    <input type="number" id="funcGlobalStart" value="1" min="1" max="8" oninput="validateRange('funcGlobal')">
+                    <span>至</span>
+                    <input type="number" id="funcGlobalEnd" value="8" min="1" max="8" oninput="validateRange('funcGlobal')">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="generateAllFuncFrames()">生成所有选项动画帧</button>
+            <div id="funcAnimContainer">
+                <p style="color: var(--light-text); text-align: center; padding: 20px;">请先配置选项数量</p>
+            </div>
+        </div>
+        <div class="panel" id="openAnim">
+            <div class="form-group">
+                <label>开屏动画菜单积分值（固定为1，不可修改）</label>
+                <input type="number" id="openMValue" value="1" readonly>
+            </div>
+            <div class="form-group">
+                <label>开屏动画积分范围（最多8帧）</label>
+                <div class="range-picker">
+                    <input type="number" id="openRangeStart" value="1" min="1" max="8" oninput="validateRange('openRange')">
+                    <span>至</span>
+                    <input type="number" id="openRangeEnd" value="8" min="1" max="8" oninput="validateRange('openRange')">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="generateOpenFrames()">生成开屏动画帧</button>
+            <div class="frame-list" id="openFrameList"></div>
+        </div>
+        <div class="panel" id="closeAnim">
+            <div class="form-group">
+                <label>关闭动画菜单积分值（固定为0，不可修改）</label>
+                <input type="number" id="closeMValue" value="0" readonly>
+            </div>
+            <div class="form-group">
+                <label>关闭动画积分范围（最多8帧）</label>
+                <div class="range-picker">
+                    <input type="number" id="closeRangeStart" value="1" min="1" max="8" oninput="validateRange('closeRange')">
+                    <span>至</span>
+                    <input type="number" id="closeRangeEnd" value="8" min="1" max="8" oninput="validateRange('closeRange')">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="generateCloseFrames()">生成关闭动画帧</button>
+            <div class="frame-list" id="closeFrameList"></div>
+        </div>
+        <div class="panel" id="funcExec">
+            <div class="form-group">
+                <label>指令执行目标</label>
+                <select id="execTarget">
+                    <option value="@a">@a - 所有玩家</option>
+                    <option value="@p">@p - 最近玩家</option>
+                    <option value="@s">@s - 执行者自身</option>
+                </select>
+            </div>
+            <div class="exec-type-switch">
+                <button class="exec-type-btn active" onclick="switchExecType('coords')">坐标传送</button>
+                <button class="exec-type-btn" onclick="switchExecType('custom')">自定义指令</button>
+            </div>
+            <div id="execOptionContainer" class="exec-type-coords">
+                <p style="color: var(--light-text); text-align: center; padding: 20px;">请先在【基础配置】设置选项数量并点击更新</p>
+            </div>
+            <button class="btn-primary" onclick="generateExecCommands()">生成执行指令</button>
+            <div class="output-box" style="margin-top: 16px;">
+                <label>执行命令（连锁命令链·无条件)</label>
+                <textarea class="output-textarea" id="execCommandOutput" readonly placeholder="生成的指令将显示在这里"></textarea>
+                <div class="btn-group">
+                    <button class="btn-copy" onclick="copyToClipboard('execCommandOutput')">复制指令</button>
+                    <span class="copy-tip" id="execCommandOutputCopyTip">复制成功！</span>
+                </div>
+            </div>
+        </div>
+        <div class="panel" id="preview">
+            <div class="form-group">
+                <label>当前菜单积分值（0=关闭 1=开屏 ≥2=选项）</label>
+                <input type="number" id="currentM" value="1" min="0" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+                <label>当前动画积分值</label>
+                <input type="number" id="currentT" value="1" min="1" oninput="updatePreview()">
+            </div>
+            <label>实时预览</label>
+            <div class="preview-box" id="previewBox">调整积分值查看预览内容</div>
+            <div class="output-group">
+                <div class="output-box">
+                    <label>关闭动画指令（循环命令方块·无条件）</label>
+                    <textarea class="output-textarea" id="closeAnimCommand" readonly></textarea>
+                    <div class="btn-group">
+                        <button class="btn-copy" onclick="copyToClipboard('closeAnimCommand')">复制指令</button>
+                        <span class="copy-tip" id="closeAnimCommandCopyTip">复制成功！</span>
+                    </div>
+                </div>
+                <div class="output-box">
+                    <label>开屏动画指令（连锁命令方块·无条件）</label>
+                    <textarea class="output-textarea" id="openAnimCommand" readonly></textarea>
+                    <div class="btn-group">
+                        <button class="btn-copy" onclick="copyToClipboard('openAnimCommand')">复制指令</button>
+                        <span class="copy-tip" id="openAnimCommandCopyTip">复制成功！</span>
+                    </div>
+                </div>
+                <div class="output-box">
+                    <label>选择动画指令（连锁命令方块·无条件）</label>
+                    <textarea class="output-textarea" id="funcAnimCommand" readonly></textarea>
+                    <div class="btn-group">
+                        <button class="btn-copy" onclick="copyToClipboard('funcAnimCommand')">复制指令</button>
+                        <span class="copy-tip" id="funcAnimCommandCopyTip">复制成功！</span>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-primary" style="margin-top: 16px;" onclick="generateSplitCommands()">生成所有动画指令</button>
+            <div class="full-command-area">
+                <h3>完整指令包（直接复制到游戏）</h3>
+                <textarea class="full-command-textarea" id="fullCommand" readonly></textarea>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-copy" onclick="copyToClipboard('fullCommand')">复制完整指令</button>
+                    <span class="copy-tip" id="fullCommandCopyTip">复制成功！</span>
+                </div>
+                <button class="btn-primary" style="margin-top: 8px; width: 100%;" onclick="generateFullCommand()">生成完整指令包</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let frameData = { open: [], close: [], func: [] };
+        let funcCount = 0;
+        let funcOptions = [];
+        let execOptions = [];
+        let currentExecType = 'coords';
+        const MAX_FRAME_COUNT = 8;
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+        if(localStorage.getItem('darkMode') === 'true') toggleDarkMode();
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function switchExecType(type) {
+            currentExecType = type;
+            document.querySelectorAll('.exec-type-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.exec-type-btn[onclick="switchExecType('${type}')"]`).classList.add('active');
+            document.getElementById('execOptionContainer').className = `exec-type-${type}`;
+        }
+
+        function validateRange(prefix) {
+            const start = parseInt(document.getElementById(`${prefix}Start`).value);
+            const end = parseInt(document.getElementById(`${prefix}End`).value);
+            if(isNaN(start) || isNaN(end)) return;
+            const s = Math.min(Math.max(start, 1), MAX_FRAME_COUNT);
+            const e = Math.min(Math.max(end, s), MAX_FRAME_COUNT);
+            document.getElementById(`${prefix}Start`).value = s;
+            document.getElementById(`${prefix}End`).value = e;
+        }
+
+        function updateFuncOptions() {
+            funcCount = parseInt(document.getElementById('funcCount').value) || 1;
+            const optionContainer = document.getElementById('optionEditContainer');
+            const animContainer = document.getElementById('funcAnimContainer');
+            const execContainer = document.getElementById('execOptionContainer');
+            
+            optionContainer.innerHTML = '';
+            animContainer.innerHTML = '';
+            execContainer.innerHTML = '';
+            funcOptions = [];
+            execOptions = [];
+
+            for (let i = 0; i < funcCount; i++) {
+                const mValue = i + 2;
+                funcOptions.push({
+                    id: i,
+                    mValue: mValue,
+                    normalStyle: `§7[选项] §f${i + 1}`,
+                    highlightStyle: `§a[选中] §f${i + 1}`
+                });
+                const optionItem = document.createElement('div');
+                optionItem.className = 'option-edit';
+                optionItem.innerHTML = `
+                    <h4>选项 ${i + 1} | 菜单积分值：${mValue}</h4>
+                    <div class="form-group">
+                        <label>未选中样式（支持§颜色代码）</label>
+                        <input type="text" id="funcNormal_${i}" value="${funcOptions[i].normalStyle}" oninput="updateFuncOption(${i}, 'normalStyle', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>选中高亮样式（支持§颜色代码）</label>
+                        <input type="text" id="funcHighlight_${i}" value="${funcOptions[i].highlightStyle}" oninput="updateFuncOption(${i}, 'highlightStyle', this.value)">
+                    </div>
+                `;
+                optionContainer.appendChild(optionItem);
+
+                const animItem = document.createElement('div');
+                animItem.className = 'func-item';
+                animItem.innerHTML = `<h4>选项 ${i + 1} 动画帧</h4><div class="frame-list" id="funcFrameList_${i}"></div>`;
+                animContainer.appendChild(animItem);
+
+                execOptions.push({
+                    id: i,
+                    mValue: mValue,
+                    x: 100 + i * 10,
+                    y: 70,
+                    z: 100 + i * 10,
+                    customCmd: ""
+                });
+                const execItem = document.createElement('div');
+                execItem.className = 'exec-option-item';
+                execItem.innerHTML = `
+                    <h5>选项 ${i + 1} | 积分值：${mValue}</h5>
+                    <div class="exec-coords-group">
+                        <div class="range-picker">
+                            <input type="number" id="execX_${i}" value="${execOptions[i].x}" placeholder="X坐标" oninput="updateExecData(${i}, 'x', this.value)">
+                            <input type="number" id="execY_${i}" value="${execOptions[i].y}" placeholder="Y坐标" oninput="updateExecData(${i}, 'y', this.value)">
+                            <input type="number" id="execZ_${i}" value="${execOptions[i].z}" placeholder="Z坐标" oninput="updateExecData(${i}, 'z', this.value)">
+                        </div>
+                    </div>
+                    <div class="exec-custom-group">
+                        <div class="form-group">
+                            <label>自定义指令内容</label>
+                            <textarea id="execCustom_${i}" placeholder="输入Minecraft基岩版指令" oninput="updateExecData(${i}, 'customCmd', this.value)"></textarea>
+                        </div>
+                    </div>
+                `;
+                execContainer.appendChild(execItem);
+            }
+        }
+
+        function updateFuncOption(index, key, value) {
+            if(funcOptions[index]) funcOptions[index][key] = value;
+        }
+
+        function updateExecData(index, key, value) {
+            if(execOptions[index]) {
+                execOptions[index][key] = value;
+            }
+        }
+
+        function createFrameItem(type, t, content, container, funcIndex = -1) {
+            const frameItem = document.createElement('div');
+            frameItem.className = 'frame-item';
+            frameItem.innerHTML = `
+                <label>动画帧 ${t}</label>
+                <textarea placeholder="输入显示文本（支持§颜色代码）" oninput="updateFrameContent('${type}', ${t}, this.value, ${funcIndex})">${content}</textarea>
+            `;
+            container.appendChild(frameItem);
+        }
+
+        function updateFrameContent(type, t, content, funcIndex = -1) {
+            let targetData = type === 'open' ? frameData.open : type === 'close' ? frameData.close : frameData.func[funcIndex].frames;
+            const idx = targetData.findIndex(f => f.t === t);
+            if(idx !== -1) targetData[idx].content = content;
+            updatePreview();
+        }
+
+        function refreshFrames(type, container, targetData, funcIndex = -1) {
+            container.innerHTML = '';
+            targetData.forEach(frame => createFrameItem(type, frame.t, frame.content, container, funcIndex));
+        }
+
+        function generateOpenFrames() {
+            const start = parseInt(document.getElementById('openRangeStart').value);
+            const end = parseInt(document.getElementById('openRangeEnd').value);
+            const m = parseInt(document.getElementById('openMValue').value);
+            const container = document.getElementById('openFrameList');
+            frameData.open = [];
+            for(let t = end; t >= start; t--) frameData.open.push({m, t, content: `§b菜单加载中... §f[${t}/${end}]`});
+            refreshFrames('open', container, frameData.open);
+        }
+
+        function generateCloseFrames() {
+            const start = parseInt(document.getElementById('closeRangeStart').value);
+            const end = parseInt(document.getElementById('closeRangeEnd').value);
+            const m = parseInt(document.getElementById('closeMValue').value);
+            const container = document.getElementById('closeFrameList');
+            frameData.close = [];
+            for(let t = end; t >= start; t--) frameData.close.push({m, t, content: `§c菜单关闭中... §f[${t}/${end}]`});
+            refreshFrames('close', container, frameData.close);
+        }
+
+        function generateAllFuncFrames() {
+            const start = parseInt(document.getElementById('funcGlobalStart').value);
+            const end = parseInt(document.getElementById('funcGlobalEnd').value);
+            frameData.func = [];
+            for(let i = 0; i < funcCount; i++) {
+                const m = funcOptions[i].mValue;
+                const frames = [];
+                for(let t = end; t >= start; t--) {
+                    const progress = Math.floor((t / end) * 100);
+                    frames.push({
+                        m,
+                        t,
+                        content: `${funcOptions[i].normalStyle} §f| 进度 ${progress}%`
+                    });
+                }
+                frameData.func.push({id: i, mValue: m, frames: frames});
+                const container = document.getElementById(`funcFrameList_${i}`);
+                refreshFrames('func', container, frames, i);
+            }
+        }
+
+        function updatePreview() {
+            const currentM = parseInt(document.getElementById('currentM').value);
+            const currentT = parseInt(document.getElementById('currentT').value);
+            const previewBox = document.getElementById('previewBox');
+            
+            let previewText = "无匹配内容";
+            if(currentM === 0) {
+                const frame = frameData.close.find(f => f.t === currentT);
+                if(frame) previewText = frame.content;
+            } else if(currentM === 1) {
+                const frame = frameData.open.find(f => f.t === currentT);
+                if(frame) previewText = frame.content;
+            } else {
+                const funcItem = frameData.func.find(f => f.mValue === currentM);
+                if(funcItem) {
+                    const frame = funcItem.frames.find(f => f.t === currentT);
+                    if(frame) previewText = frame.content;
+                }
+            }
+            previewBox.textContent = previewText || "无内容";
+        }
+
+        function generateExecCommands() {
+            const menuSb = document.getElementById('menuScoreboard').value;
+            const target = document.getElementById('execTarget').value;
+            let commands = [];
+
+            execOptions.forEach(opt => {
+                let cmd = "";
+                if(currentExecType === 'coords') {
+                    cmd = `tp ${target}[scores={${menuSb}=${opt.mValue}},rx=-88] ${opt.x} ${opt.y} ${opt.z}`;
+                } else {
+                    cmd = opt.customCmd.trim() || "";
+                }
+                if(cmd) commands.push(cmd);
+            });
+            const maxMenuVal = funcCount + 1;
+            commands.push(`scoreboard players set @a[scores={${menuSb}=2..${maxMenuVal}},rx=-88] ${menuSb} 0`);
+            document.getElementById('execCommandOutput').value = commands.join('\n');
+        }
+
+        function generateSplitCommands() {
+            const menuSb = document.getElementById('menuScoreboard').value;
+            const timeSb = document.getElementById('timeScoreboard').value;
+            let closeCmd = [], openCmd = [], funcCmd = [];
+
+            const closeMaxT = frameData.close.length > 0 ? Math.max(...frameData.close.map(f => f.t)) : 8;
+            let closeRawText = [];
+            for(let t = closeMaxT; t >= 1; t--) {
+                const frame = frameData.close.find(f => f.t === t);
+                const text = frame ? frame.content.replace(/"/g, '\\"').replace(/\n/g, '\\n') : "";
+                closeRawText.push(`{"translate":"%%2","with":{"rawtext":[{"selector":"@s[scores={${timeSb}=${t}}]"},{"text":"${text}"},{"text":""}]}}`);
+            }
+            closeCmd.push(`execute as @a[scores={${menuSb}=0}] run titleraw @s actionbar {"rawtext":[${closeRawText.join(',')}]}`);
+
+            const openMaxT = frameData.open.length > 0 ? Math.max(...frameData.open.map(f => f.t)) : 8;
+            let openRawText = [];
+            for(let t = openMaxT; t >= 1; t--) {
+                const frame = frameData.open.find(f => f.t === t);
+                const text = frame ? frame.content.replace(/"/g, '\\"').replace(/\n/g, '\\n') : "";
+                openRawText.push(`{"translate":"%%2","with":{"rawtext":[{"selector":"@s[scores={${timeSb}=${t}}]"},{"text":"${text}"},{"text":""}]}}`);
+            }
+            openCmd.push(`execute as @a[scores={${menuSb}=1}] run titleraw @s actionbar {"rawtext":[${openRawText.join(',')}]}`);
+
+            let funcRawText = [];
+            const minMenuVal = 2;
+            const maxMenuVal = funcCount + 1;
+            const funcMaxT = frameData.func.length > 0 ? Math.max(...frameData.func.map(f => Math.max(...f.frames.map(fr => fr.t)))) : 8;
+
+            frameData.func.forEach((funcItem, idx) => {
+                const mVal = funcItem.mValue;
+                const highlightText = funcOptions[idx].highlightStyle.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                
+                for(let t = funcMaxT; t >= 1; t--) {
+                    const frame = funcItem.frames.find(f => f.t === t);
+                    const animText = frame ? frame.content.replace(/"/g, '\\"').replace(/\n/g, '\\n') : funcOptions[idx].normalStyle.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                    funcRawText.push(`{"translate":"%%2","with":{"rawtext":[{"selector":"@s[scores={${menuSb}=${mVal},${timeSb}=${t}}]"},{"text":"${animText}"},{"text":""}]}}`);
+                }
+                funcRawText.push(`{"translate":"%%2","with":{"rawtext":[{"selector":"@s[scores={${menuSb}=${mVal},${timeSb}=!1..${funcMaxT}}]"},{"text":"${highlightText}"},{"text":""}]}}`);
+            });
+
+            funcCmd.push(`execute as @a[scores={${menuSb}=${minMenuVal}..${maxMenuVal}}] run titleraw @s actionbar {"rawtext":[${funcRawText.join(',')}]}`);
+
+            document.getElementById('closeAnimCommand').value = closeCmd.join('\n');
+            document.getElementById('openAnimCommand').value = openCmd.join('\n');
+            document.getElementById('funcAnimCommand').value = funcCmd.join('\n');
+        }
+
+        function generateFullCommand() {
+            const menuSb = document.getElementById('menuScoreboard').value;
+            const timeSb = document.getElementById('timeScoreboard').value;
+            const openMaxT = frameData.open.length > 0 ? Math.max(...frameData.open.map(f => f.t)) : 0;
+            const funcMaxT = frameData.func.length > 0 ? Math.max(...frameData.func.map(f => Math.max(...f.frames.map(fr => fr.t)))) : 0;
+            const closeMaxT = frameData.close.length > 0 ? Math.max(...frameData.close.map(f => f.t)) : 0;
+            let fullCmd = [];
+
+            fullCmd.push(`# 1. 前置 创建积分板`);
+            fullCmd.push(`scoreboard objectives add ${menuSb} dummy "雪球菜单"`);
+            fullCmd.push(`scoreboard objectives add ${timeSb} dummy "动画计时"`);
+            fullCmd.push(`# 前置 初始化积分(选择使用，非必要不执行)`);
+            fullCmd.push(`scoreboard players set @a ${menuSb} 0`);
+            fullCmd.push(`scoreboard players set @a ${timeSb} 0`);
+            fullCmd.push(``);
+            fullCmd.push(`# 2. 雪球触发核心逻辑 连锁命令链`);
+            fullCmd.push(`# 点击雪球打开菜单`);
+            fullCmd.push(`execute at @e[type=minecraft:snowball] run scoreboard players set @p[scores={${timeSb}=..0,${menuSb}=0}] ${menuSb} 1`);
+            fullCmd.push(`# 开屏动画计时初始化(有条件)`);
+            fullCmd.push(`execute at @e[type=minecraft:snowball] run scoreboard players set @p[scores={${menuSb}=1,${timeSb}=..0}] ${timeSb} ${openMaxT}`);
+            fullCmd.push(`# 切换菜单选项`);
+            fullCmd.push(`execute at @e[type=minecraft:snowball] run scoreboard players add @p[scores={${timeSb}=..0,${menuSb}=1..}] ${menuSb} 1`);
+            fullCmd.push(`# 选择选项动画计时初始化`);
+            fullCmd.push(`execute at @e[type=minecraft:snowball] run scoreboard players set @p[scores={${timeSb}=..0,${menuSb}=1..}] ${timeSb} ${funcMaxT}`);
+            fullCmd.push(`# 动画计时递减`);
+            fullCmd.push(`scoreboard players remove @a[scores={${timeSb}=0..}] ${timeSb} 1`);
+            fullCmd.push(`# 清除雪球实体`);
+            fullCmd.push(`execute as @e[type=minecraft:snowball] run kill @s`);
+            fullCmd.push(`# 防溢出`);
+            fullCmd.push(`execute as @a[scores={${menuSb}=${funcCount + 2}..}] run scoreboard players set @s ${menuSb} 2`);
+            fullCmd.push(`# 低头关闭菜单`);
+            fullCmd.push(`execute as @a[rxm=85,scores={${menuSb}=1..}] run scoreboard players set @s ${timeSb} ${closeMaxT}`);
+            fullCmd.push(`execute as @a[rxm=85,scores={${menuSb}=1..}] run scoreboard players set @s ${menuSb} 0`);
+            fullCmd.push(``);
+            fullCmd.push(`# 3. 菜单执行指令（坐标传送/自定义指令）`);
+            fullCmd.push(document.getElementById('execCommandOutput').value);
+            fullCmd.push(``);
+            fullCmd.push(`# 4. 关闭动画标题指令`);
+            fullCmd.push(document.getElementById('closeAnimCommand').value);
+            fullCmd.push(``);
+            fullCmd.push(`# 5. 开屏动画标题指令`);
+            fullCmd.push(document.getElementById('openAnimCommand').value);
+            fullCmd.push(``);
+            fullCmd.push(`# 6. 选择动画标题指令`);
+            fullCmd.push(document.getElementById('funcAnimCommand').value);
+
+            document.getElementById('fullCommand').value = fullCmd.join('\n').replace(/\n\n\n/g, '\n\n');
+        }
+
+        function copyToClipboard(id) {
+            const textarea = document.getElementById(id);
+            textarea.select();
+            document.execCommand('copy');
+            const tip = document.getElementById(`${id}CopyTip`);
+            tip.style.display = 'inline';
+            setTimeout(() => tip.style.display = 'none', 2000);
+        }
+    </script>
+</body>
+</html>
