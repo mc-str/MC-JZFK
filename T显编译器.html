@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MCBE T-Display Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
+        body { background: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.02);
+        }
+        
+        .input-clean {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 16px; /* 防止 iOS 缩放 */
+            transition: all 0.2s;
+            color: #1f293b;
+            width: 100%;
+            min-height: 44px; /* 触摸友好 */
+        }
+        .input-clean:focus { outline: none; border-color: #6366f1; background: #fff; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.05); }
+        .input-clean:disabled { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
+        
+        @media (min-width: 640px) {
+            .input-clean { font-size: 13px; padding: 8px 12px; min-height: auto; }
+        }
+        
+        .node {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+        }
+        .node:active { transform: scale(0.995); }
+        .node:hover { border-color: #6366f1; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.02); transform: translateY(-1px); }
+        .node.error { border-color: #dc2626; background: #fef2f2; }
+        .node.warning { border-color: #f59e0b; background: #fffbeb; }
+        
+        .insert-gap {
+            height: 20px;
+            margin: 4px 0;
+            position: relative;
+            opacity: 0;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+        @media (hover: hover) {
+            .insert-gap:hover { opacity: 1; }
+        }
+        .insert-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #6366f1;
+            border-radius: 1px;
+        }
+        .insert-plus {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: #6366f1;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+        }
+        
+        .preview-dark {
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #1e293b;
+            overflow-x: auto;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s;
+            cursor: pointer;
+            border: none;
+            min-height: 44px; /* 触摸友好 */
+            white-space: nowrap;
+        }
+        @media (min-width: 640px) {
+            .btn { padding: 8px 16px; font-size: 13px; min-height: auto; }
+        }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: white; color: #64748b; border: 1px solid #e2e8f0; }
+        .btn-secondary:hover { border-color: #cbd5e1; color: #334155; background: #f8fafc; }
+        .btn-danger { color: #dc2626; background: white; border: 1px solid #e2e8f0; }
+        .btn-danger:hover { background: #fef2f2; border-color: #fecaca; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        
+        .modal-backdrop { 
+            background: rgba(15, 23, 42, 0.4); 
+            backdrop-filter: blur(4px);
+            padding: 16px;
+        }
+        .modal-card { 
+            background: white; 
+            border-radius: 16px; 
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (min-width: 640px) {
+            .modal-card { border-radius: 12px; max-height: 85vh; }
+        }
+        
+        .empty-state { border: 2px dashed #e2e8f0; border-radius: 8px; color: #94a3b8; }
+        
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #dc2626;
+        }
+        @media (min-width: 640px) {
+            .error-box { font-size: 12px; padding: 8px 12px; }
+        }
+        .warning-box {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #b45309;
+        }
+        @media (min-width: 640px) {
+            .warning-box { font-size: 12px; padding: 8px 12px; }
+        }
+        .error-item, .warning-item { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+        .with-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        
+        /* 颜色表样式 - 自适应 */
+        .color-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 8px; 
+        }
+        @media (min-width: 480px) {
+            .color-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (min-width: 640px) {
+            .color-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .color-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            padding: 8px; 
+            background: #f8fafc; 
+            border-radius: 6px; 
+            border: 1px solid #e2e8f0; 
+            cursor: pointer; 
+            transition: all 0.15s;
+            min-height: 44px;
+        }
+        .color-item:active { transform: scale(0.98); }
+        .color-item:hover { border-color: #6366f1; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .color-box { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+        @media (min-width: 640px) {
+            .color-box { width: 24px; height: 24px; }
+        }
+        .color-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #475569; }
+        @media (min-width: 640px) {
+            .color-code { font-size: 12px; }
+        }
+        .color-name { font-size: 11px; color: #94a3b8; }
+        @media (min-width: 640px) {
+            .color-name { font-size: 10px; }
+        }
+
+        /* 移动端优化 */
+        .mobile-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        
+        .touch-action-manipulation { touch-action: manipulation; }
+        
+        /* 防止 iOS 表单缩放 */
+        @supports (-webkit-touch-callout: none) {
+            select, input, textarea { font-size: 16px; }
+            @media (min-width: 640px) {
+                select, input, textarea { font-size: 13px; }
+            }
+        }
+        
+        /* 小屏幕按钮组 */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn-group .btn {
+            flex: 1;
+            min-width: calc(50% - 4px);
+        }
+        @media (min-width: 640px) {
+            .btn-group .btn { flex: none; min-width: auto; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm">T</div>
+                <div>
+                    <h1 class="font-semibold text-slate-900 text-xs sm:text-sm tracking-tight">T-Display Studio</h1>
+                    <p class="text-[10px] sm:text-[11px] text-slate-500">MCBE JSON Text Compiler</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 pb-20 lg:pb-4">
+        
+        <div class="space-y-3 sm:space-y-4">
+            
+            <div class="card p-3 sm:p-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">指令类型</label>
+                        <select id="cmdType" onchange="app.toggleTitle()" class="input-clean w-full touch-action-manipulation">
+                            <option value="tellraw">/tellraw</option>
+                            <option value="titleraw">/titleraw</option>
+                        </select>
+                    </div>
+                    <div id="titleLoc" class="hidden">
+                        <label class="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">显示位置</label>
+                        <select id="titlePos" onchange="app.update()" class="input-clean w-full touch-action-manipulation">
+                            <option value="actionbar">actionbar</option>
+                            <option value="title">title</option>
+                            <option value="subtitle">subtitle</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1 sm:col-span-2">
+                        <label class="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">目标</label>
+                        <div class="flex gap-2">
+                            <select id="targetSel" onchange="app.handleTarget()" class="input-clean w-auto sm:w-32 touch-action-manipulation">
+                                <option value="@s">@s (执行命令者)</option>
+                                <option value="@a" selected>@a (所有玩家)</option>
+                                <option value="@r">@r (随机玩家)</option>
+                                <option value="@p">@p (最近玩家)</option>
+                                <option value="@e">@e (所有实体)</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                            <input type="text" id="targetInput" value="@a" oninput="app.update()" 
+                                class="input-clean flex-1 mono hidden" placeholder="@a[tag=vip]">
+                            <div id="targetShow" class="flex-1 input-clean mono text-slate-600 bg-slate-50 flex items-center">@a</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-1">
+                <div class="btn-group w-full sm:w-auto">
+                    <button onclick="app.showImport()" class="btn btn-secondary text-xs">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span class="hidden sm:inline">导入</span>
+                        <span class="sm:hidden">导入</span>
+                    </button>
+                    <button onclick="app.loadExample()" class="btn btn-secondary text-xs">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        示例
+                    </button>
+                    <button onclick="app.showColorTable()" class="btn btn-secondary text-xs text-amber-600 border-amber-200 hover:border-amber-300 hover:bg-amber-50">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 0 0 1 4-10z"/></svg>
+                        颜色表
+                    </button>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-900 uppercase tracking-wider w-full sm:w-auto text-right">Elements <span id="count" class="ml-1 text-slate-400 font-normal">0</span></span>
+            </div>
+
+            <div class="card p-3 sm:p-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button onclick="app.add()" class="flex-1 sm:flex-none text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 sm:py-1.5 rounded-md font-medium transition-colors flex items-center justify-center sm:justify-start gap-1 touch-action-manipulation">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                            添加元素
+                        </button>
+                        <button onclick="app.clearAll()" class="btn-danger text-xs px-3 py-2 sm:py-1.5 rounded-md touch-action-manipulation">
+                            清空
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="list" class="space-y-0">
+                    <div class="empty-state py-12 text-center text-sm">
+                        <div class="text-slate-300 mb-2">
+                            <svg width="32" height="32" class="mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v16m8-8H4"/></svg>
+                        </div>
+                        点击"添加元素"开始构建
+                    </div>
+                </div>
+                
+                <div id="errorContainer"></div>
+            </div>
+        </div>
+
+        <div class="space-y-3 sm:space-y-4">
+            
+            <div class="card p-3 sm:p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[11px] font-semibold text-slate-900 uppercase tracking-wider">Preview</span>
+                    <span id="mode" class="text-[10px] text-slate-400 mono bg-slate-100 px-2 py-0.5 rounded">tellraw</span>
+                </div>
+                <div class="preview-dark p-3 sm:p-4 min-h-[60px] sm:min-h-[80px] flex items-center justify-center">
+                    <div id="preview" class="text-sm text-center break-all whitespace-pre-line max-w-full overflow-x-auto"></div>
+                </div>
+                <div class="mt-2 flex flex-col sm:flex-row justify-between gap-1 text-[10px] text-slate-400 mono">
+                    <span>支持 § 颜色代码 + \n 换行</span>
+                    <span id="len">0 chars</span>
+                </div>
+            </div>
+
+            <div class="card p-3 sm:p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[11px] font-semibold text-slate-900 uppercase tracking-wider">JSON Output</span>
+                    <div class="flex gap-1">
+                        <button onclick="app.format()" class="p-2 sm:p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded touch-action-manipulation" title="格式化">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H3M21 6H3M21 14H3M21 18H3"/></svg>
+                        </button>
+                        <button onclick="app.minify()" class="p-2 sm:p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded touch-action-manipulation" title="压缩">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 18h16M4 6h16"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="json" readonly class="w-full h-24 sm:h-32 bg-slate-50 border border-slate-200 rounded-lg p-3 mono text-xs resize-none focus:outline-none text-slate-700" spellcheck="false"></textarea>
+            </div>
+
+            <div class="card p-3 sm:p-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                    <span class="text-[11px] font-semibold text-slate-900 uppercase tracking-wider">Command</span>
+                    <button id="copyBtn" onclick="app.copyCommand()" class="btn btn-primary text-xs w-full sm:w-auto touch-action-manipulation">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>复制命令</span>
+                    </button>
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg overflow-x-auto">
+                    <input type="text" id="cmd" readonly class="w-full bg-transparent mono text-xs text-slate-700 focus:outline-none break-all min-w-full">
+                </div>
+            </div>
+
+            <div class="card p-3 sm:p-4 bg-slate-50/50">
+                <div class="text-[11px] font-semibold text-slate-900 uppercase tracking-wider mb-3">Syntax</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mono">
+                    <div class="flex items-center gap-2 text-slate-600 p-2 sm:p-0 bg-white sm:bg-transparent rounded border border-slate-200 sm:border-0"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>{"text":"..."}</div>
+                    <div class="flex items-center gap-2 text-slate-600 p-2 sm:p-0 bg-white sm:bg-transparent rounded border border-slate-200 sm:border-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{"selector":"@p"}</div>
+                    <div class="flex items-center gap-2 text-slate-600 p-2 sm:p-0 bg-white sm:bg-transparent rounded border border-slate-200 sm:border-0"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>{"score":{...}}</div>
+                    <div class="flex items-center gap-2 text-slate-600 p-2 sm:p-0 bg-white sm:bg-transparent rounded border border-slate-200 sm:border-0"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>{"translate":"..."}</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="importModal" class="fixed inset-0 z-[100] hidden modal-backdrop flex items-center justify-center p-0 sm:p-4">
+        <div class="modal-card w-full h-full sm:h-auto sm:max-w-lg rounded-none sm:rounded-xl">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-semibold text-slate-900 text-sm">导入指令</h3>
+                <button onclick="app.closeImport()" class="text-slate-400 hover:text-slate-600 p-2 -mr-2 touch-action-manipulation"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-4 space-y-3 mobile-scroll flex-1">
+                <p class="text-xs text-slate-500">粘贴 tellraw 或 titleraw 指令（开头可加 / 或不加），自动解析 JSON 部分</p>
+                <textarea id="importText" rows="8" class="w-full input-clean mono text-xs" placeholder="tellraw @a {&quot;rawtext&quot;:[...]} 或 /tellraw @a {...}"></textarea>
+                <div id="importError" class="hidden text-xs text-red-600 bg-red-50 p-3 rounded"></div>
+            </div>
+            <div class="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+                <button onclick="app.closeImport()" class="btn btn-secondary text-xs flex-1 sm:flex-none touch-action-manipulation">取消</button>
+                <button onclick="app.parseImport()" class="btn btn-primary text-xs flex-1 sm:flex-none touch-action-manipulation">解析</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="colorModal" class="fixed inset-0 z-[100] hidden modal-backdrop flex items-center justify-center p-0 sm:p-4">
+        <div class="modal-card w-full h-full sm:h-auto sm:max-w-2xl rounded-none sm:rounded-xl">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                    <span class="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs">§</span>
+                    颜色代码参考表
+                </h3>
+                <button onclick="app.closeColorTable()" class="text-slate-400 hover:text-slate-600 p-2 -mr-2 touch-action-manipulation"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-4 mobile-scroll flex-1">
+                <div class="mb-3 flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">标准颜色</span>
+                    <span class="text-[10px] text-slate-400">点击复制</span>
+                </div>
+                <div class="color-grid mb-4" id="colorGridStandard"></div>
+                
+                <div class="mb-3 mt-4 flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">材料颜色 (1.16.0+)</span>
+                </div>
+                <div class="color-grid" id="colorGridMaterial"></div>
+            </div>
+            <div class="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+                <span class="text-[11px] text-slate-400 hidden sm:inline">点击颜色项可复制 § 代码</span>
+                <button onclick="app.closeColorTable()" class="btn btn-primary text-xs w-full sm:w-auto touch-action-manipulation">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="fixed inset-0 z-[100] hidden modal-backdrop flex items-center justify-center p-0 sm:p-4">
+        <div class="modal-card w-full h-full sm:h-auto sm:max-w-md rounded-none sm:rounded-xl">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-semibold text-slate-900 text-sm" id="editTitle">编辑</h3>
+                <button onclick="app.closeEdit()" class="text-slate-400 hover:text-slate-600 p-2 -mr-2 touch-action-manipulation"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-4 space-y-3 mobile-scroll flex-1" id="editContent"></div>
+            <div class="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+                <button onclick="app.closeEdit()" class="btn btn-secondary text-xs flex-1 sm:flex-none touch-action-manipulation">取消</button>
+                <button onclick="app.save()" class="btn btn-primary text-xs flex-1 sm:flex-none touch-action-manipulation">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            data: [],
+            editIdx: null,
+            insertIdx: null,
+            tempWith: [],
+            
+            colorsStandard: [
+                {code: '0', color: '#000000', name: '黑色'},
+                {code: '1', color: '#0000AA', name: '深蓝色'},
+                {code: '2', color: '#00AA00', name: '深绿色'},
+                {code: '3', color: '#00AAAA', name: '青色'},
+                {code: '4', color: '#AA0000', name: '深红色'},
+                {code: '5', color: '#AA00AA', name: '紫色'},
+                {code: '6', color: '#FFAA00', name: '金色'},
+                {code: '7', color: '#AAAAAA', name: '灰色'},
+                {code: '8', color: '#555555', name: '深灰色'},
+                {code: '9', color: '#5555FF', name: '蓝色'},
+                {code: 'a', color: '#55FF55', name: '绿色'},
+                {code: 'b', color: '#55FFFF', name: '浅青色'},
+                {code: 'c', color: '#FF5555', name: '红色'},
+                {code: 'd', color: '#FF55FF', name: '粉色'},
+                {code: 'e', color: '#FFFF55', name: '黄色'},
+                {code: 'f', color: '#FFFFFF', name: '白色'}
+            ],
+            
+            colorsMaterial: [
+                {code: 'g', color: '#DDD605', name: 'Minecoin金'},
+                {code: 'h', color: '#E3D4D1', name: '材料石英'},
+                {code: 'i', color: '#CECACA', name: '材料铁'},
+                {code: 'j', color: '#443A3B', name: '材料下界合金'},
+                {code: 'm', color: '#971607', name: '材料红石'},
+                {code: 'n', color: '#B4684D', name: '材料铜'},
+                {code: 'p', color: '#DEB12D', name: '材料金'},
+                {code: 'q', color: '#47A036', name: '材料绿宝石'},
+                {code: 's', color: '#2CBAA8', name: '材料钻石'},
+                {code: 't', color: '#21497B', name: '材料青金石'},
+                {code: 'u', color: '#9A5CC6', name: '材料紫水晶'}
+            ],
+            
+            init() {
+                const saved = localStorage.getItem('mcbe_json');
+                if (saved) {
+                    try {
+                        const d = JSON.parse(saved);
+                        this.data = d.data || [];
+                        document.getElementById('cmdType').value = d.type || 'tellraw';
+                        document.getElementById('titlePos').value = d.pos || 'actionbar';
+                        const t = d.target || '@a';
+                        const presets = ['@s','@a','@r','@p','@e'];
+                        if (presets.includes(t)) {
+                            document.getElementById('targetSel').value = t;
+                            this.handleTarget();
+                        } else {
+                            document.getElementById('targetSel').value = 'custom';
+                            document.getElementById('targetInput').value = t;
+                            this.handleTarget();
+                        }
+                        this.toggleTitle();
+                    } catch(e) {}
+                }
+                this.render();
+                this.update();
+            },
+            
+            showColorTable() {
+                document.getElementById('colorModal').classList.remove('hidden');
+                const gridStandard = document.getElementById('colorGridStandard');
+                const gridMaterial = document.getElementById('colorGridMaterial');
+                
+                gridStandard.innerHTML = this.colorsStandard.map(c => this.renderColorItem(c)).join('');
+                gridMaterial.innerHTML = this.colorsMaterial.map(c => this.renderColorItem(c)).join('');
+                
+                // 禁止背景滚动
+                document.body.style.overflow = 'hidden';
+            },
+            
+            closeColorTable() {
+                document.getElementById('colorModal').classList.add('hidden');
+                document.body.style.overflow = '';
+            },
+            
+            renderColorItem(c) {
+                return `
+                    <div class="color-item touch-action-manipulation" onclick="app.copyColor('${c.code}')" title="点击复制 §${c.code}">
+                        <div class="color-box" style="background-color: ${c.color}"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="color-code">§${c.code}</div>
+                            <div class="color-name truncate">${c.name}</div>
+                        </div>
+                    </div>
+                `;
+            },
+            
+            copyColor(code) {
+                navigator.clipboard.writeText('§' + code).then(() => {
+                    const btn = event.currentTarget;
+                    btn.style.borderColor = '#6366f1';
+                    btn.style.background = '#fff';
+                    setTimeout(() => {
+                        btn.style.borderColor = '';
+                        btn.style.background = '';
+                    }, 200);
+                }).catch(() => {
+                    // 降级方案
+                    const input = document.createElement('input');
+                    input.value = '§' + code;
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                });
+            },
+            
+            validate() {
+                const errors = [];
+                const warnings = [];
+                
+                this.data.forEach((el, idx) => {
+                    const num = idx + 1;
+                    let type = '';
+                    
+                    if (el.text !== undefined) {
+                        type = 'text';
+                        if (typeof el.text !== 'string') {
+                            errors.push({ idx, msg: `#${num} text 必须是字符串` });
+                        } else if (el.text === '') {
+                            errors.push({ idx, msg: `#${num} text 为空` });
+                        }
+                    }
+                    else if (el.selector !== undefined) {
+                        type = 'selector';
+                        if (typeof el.selector !== 'string') {
+                            errors.push({ idx, msg: `#${num} selector 必须是字符串` });
+                        } else if (!el.selector.match(/^@[sarpaer](\[.*\])?$/)) {
+                            errors.push({ idx, msg: `#${num} selector 格式错误 (${el.selector})` });
+                        }
+                    }
+                    else if (el.score !== undefined) {
+                        type = 'score';
+                        if (!el.score || typeof el.score !== 'object') {
+                            errors.push({ idx, msg: `#${num} score 必须是对象` });
+                        } else {
+                            if (!el.score.name) errors.push({ idx, msg: `#${num} score 缺少 name 字段` });
+                            if (!el.score.objective) errors.push({ idx, msg: `#${num} score 缺少 objective 字段` });
+                        }
+                    }
+                    else if (el.translate !== undefined) {
+                        type = 'translate';
+                        if (typeof el.translate !== 'string') {
+                            errors.push({ idx, msg: `#${num} translate 必须是字符串` });
+                        } else if (el.translate === '') {
+                            errors.push({ idx, msg: `#${num} translate 为空` });
+                        }
+                        if (el.with && (!el.with.rawtext || !Array.isArray(el.with.rawtext))) {
+                            errors.push({ idx, msg: `#${num} with.rawtext 必须是数组` });
+                        }
+                    }
+                    else {
+                        errors.push({ idx, msg: `#${num} 未知的元素类型` });
+                    }
+                });
+                
+                return { errors, warnings };
+            },
+            
+            handleTarget() {
+                const sel = document.getElementById('targetSel').value;
+                const input = document.getElementById('targetInput');
+                const show = document.getElementById('targetShow');
+                if (sel === 'custom') {
+                    input.classList.remove('hidden');
+                    show.classList.add('hidden');
+                    input.focus();
+                } else {
+                    input.classList.add('hidden');
+                    show.classList.remove('hidden');
+                    input.value = sel;
+                    show.textContent = sel;
+                }
+                this.update();
+            },
+            
+            toggleTitle() {
+                const isTitle = document.getElementById('cmdType').value === 'titleraw';
+                document.getElementById('titleLoc').classList.toggle('hidden', !isTitle);
+                this.update();
+            },
+            
+            showImport() {
+                document.getElementById('importModal').classList.remove('hidden');
+                document.getElementById('importText').focus();
+                document.body.style.overflow = 'hidden';
+            },
+            
+            closeImport() {
+                document.getElementById('importModal').classList.add('hidden');
+                document.getElementById('importText').value = '';
+                document.getElementById('importError').classList.add('hidden');
+                document.body.style.overflow = '';
+            },
+            
+            parseImport() {
+                const text = document.getElementById('importText').value.trim();
+                const err = document.getElementById('importError');
+                try {
+                    if (!text) throw new Error('请输入指令');
+                    let jsonStr = '', type = 'tellraw', target = '@a', pos = 'actionbar';
+                    const t1 = text.match(/\/?tellraw\s+(\S+)\s+(.+)/s);
+                    if (t1) { target = t1[1]; jsonStr = t1[2]; type = 'tellraw'; }
+                    else {
+                        const t2 = text.match(/\/?titleraw\s+(\S+)\s+(\S+)\s+(.+)/s);
+                        if (t2) { target = t2[1]; pos = t2[2]; jsonStr = t2[3]; type = 'titleraw'; }
+                        else if (text.startsWith('{')) { jsonStr = text; }
+                        else throw new Error('格式错误：需要 tellraw 或 titleraw 开头');
+                    }
+                    const json = JSON.parse(jsonStr);
+                    if (!json.rawtext || !Array.isArray(json.rawtext)) throw new Error('缺少 rawtext 数组');
+                    const valid = json.rawtext.filter(e => e.text !== undefined || e.selector !== undefined || e.score !== undefined || e.translate !== undefined);
+                    if (valid.length === 0) throw new Error('未找到有效元素');
+                    if (this.data.length > 0 && !confirm(`覆盖现有 ${this.data.length} 个元素?`)) return;
+                    
+                    this.data = valid;
+                    document.getElementById('cmdType').value = type;
+                    if (type === 'titleraw') document.getElementById('titlePos').value = ['actionbar','title','subtitle'].includes(pos) ? pos : 'actionbar';
+                    const presets = ['@s','@a','@r','@p','@e'];
+                    if (presets.includes(target)) {
+                        document.getElementById('targetSel').value = target;
+                    } else {
+                        document.getElementById('targetSel').value = 'custom';
+                        document.getElementById('targetInput').value = target;
+                    }
+                    this.handleTarget();
+                    this.toggleTitle();
+                    this.closeImport();
+                    this.render();
+                    this.update();
+                } catch(e) {
+                    err.textContent = e.message;
+                    err.classList.remove('hidden');
+                }
+            },
+            
+            add(idx = null) {
+                this.insertIdx = idx;
+                this.editIdx = null;
+                this.tempWith = [];
+                this.openEdit();
+            },
+            
+            edit(idx) {
+                this.editIdx = idx;
+                this.insertIdx = null;
+                const el = this.data[idx];
+                this.tempWith = el.with?.rawtext?.map(r => r.text || '') || [];
+                this.openEdit(el);
+            },
+            
+            del(idx) {
+                if (confirm('删除此元素?')) {
+                    this.data.splice(idx, 1);
+                    this.render();
+                    this.update();
+                }
+            },
+            
+            move(idx, dir) {
+                if (dir === 'up' && idx > 0) [this.data[idx], this.data[idx-1]] = [this.data[idx-1], this.data[idx]];
+                else if (dir === 'down' && idx < this.data.length - 1) [this.data[idx], this.data[idx+1]] = [this.data[idx+1], this.data[idx]];
+                this.render();
+                this.update();
+            },
+            
+            openEdit(data = null) {
+                document.getElementById('editModal').classList.remove('hidden');
+                document.getElementById('editTitle').textContent = data ? '编辑元素' : '添加元素';
+                document.body.style.overflow = 'hidden';
+                const type = data ? (data.text !== undefined ? 'text' : data.selector !== undefined ? 'selector' : data.score !== undefined ? 'score' : 'translate') : 'text';
+                let html = `
+                    <div>
+                        <label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">类型</label>
+                        <select id="edType" onchange="app.renderForm()" class="input-clean w-full touch-action-manipulation">
+                            <option value="text" ${type==='text'?'selected':''}>文本 (text)</option>
+                            <option value="selector" ${type==='selector'?'selected':''}>选择器 (selector)</option>
+                            <option value="score" ${type==='score'?'selected':''}>记分板 (score)</option>
+                            <option value="translate" ${type==='translate'?'selected':''}>翻译键 (translate)</option>
+                        </select>
+                    </div>
+                    <div id="edFields"></div>
+                `;
+                document.getElementById('editContent').innerHTML = html;
+                this.renderForm(data);
+            },
+            
+            renderForm(data = null) {
+                const t = document.getElementById('edType').value;
+                const box = document.getElementById('edFields');
+                const forms = {
+                    text: () => `<div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">内容</label><textarea id="fText" rows="4" class="input-clean w-full mono text-sm sm:text-xs" placeholder="支持 § 颜色代码，使用 \\n 换行">${data?.text || ''}</textarea></div>`,
+                    selector: () => `<div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">选择器</label><input type="text" id="fSel" value="${data?.selector || '@p'}" class="input-clean w-full mono text-sm sm:text-xs"></div>`,
+                    score: () => {
+                        const s = data?.score || {};
+                        return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">记分项</label><input type="text" id="fObj" value="${s.objective || ''}" class="input-clean w-full text-sm sm:text-xs" placeholder="money"></div><div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">目标</label><input type="text" id="fName" value="${s.name || '@s'}" class="input-clean w-full mono text-sm sm:text-xs"></div></div><div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">固定值 (可选)</label><input type="number" id="fVal" value="${s.value || ''}" class="input-clean w-full text-sm sm:text-xs" placeholder="动态"></div>`;
+                    },
+                    translate: () => {
+                        const withHtml = this.tempWith.length ? this.tempWith.map((w, i) => `<div class="with-row"><input type="text" class="with-inp flex-1 input-clean text-sm sm:text-xs" value="${w}" placeholder="参数 ${i+1}"><button onclick="app.rmw(${i})" class="text-slate-400 hover:text-red-500 px-2 touch-action-manipulation">&times;</button></div>`).join('') : '<div class="text-xs text-slate-400 italic mb-2">无参数</div>';
+                        return `<div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">键名</label><input type="text" id="fKey" value="${data?.translate || ''}" class="input-clean w-full mono text-sm sm:text-xs" placeholder="tile.stone.name"></div><div><label class="text-[11px] font-medium text-slate-500 uppercase mb-1.5 block">With 参数</label><div id="withBox" class="space-y-1">${withHtml}</div><button onclick="app.addw()" class="mt-2 text-[13px] sm:text-[11px] text-indigo-600 hover:text-indigo-700 font-medium touch-action-manipulation">+ 添加参数</button></div>`;
+                    }
+                };
+                box.innerHTML = forms[t]();
+            },
+            
+            addw() { this.tempWith.push(''); this.refreshWith(); },
+            rmw(i) { this.tempWith.splice(i, 1); this.refreshWith(); },
+            refreshWith() {
+                const box = document.getElementById('withBox');
+                if (!box) return;
+                if (this.tempWith.length === 0) { box.innerHTML = '<div class="text-xs text-slate-400 italic mb-2">无参数</div>'; return; }
+                box.innerHTML = this.tempWith.map((w, i) => `<div class="with-row"><input type="text" class="with-inp flex-1 input-clean text-sm sm:text-xs" value="${w}" placeholder="参数 ${i+1}"><button onclick="app.rmw(${i})" class="text-slate-400 hover:text-red-500 px-2 touch-action-manipulation">&times;</button></div>`).join('');
+            },
+            closeEdit() { 
+                document.getElementById('editModal').classList.add('hidden'); 
+                document.body.style.overflow = '';
+                this.editIdx = null; 
+                this.insertIdx = null; 
+            },
+            
+            save() {
+                const type = document.getElementById('edType').value;
+                let el = {};
+                try {
+                    switch(type) {
+                        case 'text': el = { text: document.getElementById('fText').value }; break;
+                        case 'selector': el = { selector: document.getElementById('fSel').value }; break;
+                        case 'score': 
+                            el = { score: { name: document.getElementById('fName').value || '@s', objective: document.getElementById('fObj').value }};
+                            const v = document.getElementById('fVal').value;
+                            if (v) el.score.value = parseInt(v);
+                            break;
+                        case 'translate': 
+                            el = { translate: document.getElementById('fKey').value };
+                            const arr = [];
+                            document.querySelectorAll('.with-inp').forEach(i => { if (i.value.trim()) arr.push({ text: i.value.trim() }); });
+                            if (arr.length) el.with = { rawtext: arr };
+                            break;
+                    }
+                    if (this.editIdx !== null) this.data[this.editIdx] = el;
+                    else if (this.insertIdx !== null) this.data.splice(this.insertIdx, 0, el);
+                    else this.data.push(el);
+                    this.closeEdit();
+                    this.render();
+                    this.update();
+                } catch(e) { alert(e.message); }
+            },
+            
+            render() {
+                const box = document.getElementById('list');
+                const { errors, warnings } = this.validate();
+                document.getElementById('count').textContent = this.data.length;
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.node').forEach((n, i) => {
+                        n.classList.remove('error', 'warning');
+                        if (errors.some(e => e.idx === i)) n.classList.add('error');
+                        else if (warnings.some(e => e.idx === i)) n.classList.add('warning');
+                    });
+                }, 0);
+                
+                if (!this.data.length) {
+                    box.innerHTML = `<div class="empty-state py-12 text-center text-sm text-slate-400"><svg width="32" height="32" class="mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v16m8-8H4"/></svg>点击"添加元素"开始构建</div>`;
+                    this.renderErrors(errors, warnings);
+                    return;
+                }
+                
+                box.innerHTML = '';
+                box.appendChild(this.gap(0));
+                
+                this.data.forEach((el, i) => {
+                    let type, label, text;
+                    if (el.text !== undefined) { 
+                        type = 'text'; label = 'TEXT'; 
+                        text = el.text.length > 30 ? el.text.slice(0, 30) + '...' : el.text;
+                    }
+                    else if (el.selector) { type = 'sel'; label = 'SEL'; text = el.selector; }
+                    else if (el.score) { type = 'scr'; label = 'SCR'; text = `${el.score.objective} / ${el.score.name}`; }
+                    else if (el.translate) { type = 'trn'; label = 'TRN'; text = el.translate + (el.with ? ` [${el.with.rawtext.length}]` : ''); }
+                    else { type = 'unk'; label = 'ERR'; text = '未知类型'; }
+                    
+                    const colors = {text:'bg-indigo-50 text-indigo-600', sel:'bg-emerald-50 text-emerald-600', scr:'bg-amber-50 text-amber-600', trn:'bg-rose-50 text-rose-600', unk:'bg-red-50 text-red-600'};
+                    
+                    const div = document.createElement('div');
+                    div.className = `node p-3 mb-1 ${errors.some(e => e.idx === i) ? 'error' : warnings.some(e => e.idx === i) ? 'warning' : ''}`;
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between gap-2 sm:gap-3">
+                            <div class="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${colors[type] || colors.unk} flex-shrink-0">${label}</span>
+                                <span class="text-xs text-slate-700 mono truncate">${this.esc(text)}</span>
+                            </div>
+                            <div class="flex items-center gap-0.5 flex-shrink-0">
+                                <button onclick="app.move(${i}, 'up')" ${i===0?'disabled':''} class="p-2 sm:p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 touch-action-manipulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg></button>
+                                <button onclick="app.move(${i}, 'down')" ${i===this.data.length-1?'disabled':''} class="p-2 sm:p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 touch-action-manipulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+                                <button onclick="app.edit(${i})" class="p-2 sm:p-1 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded touch-action-manipulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                                <button onclick="app.del(${i})" class="p-2 sm:p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded touch-action-manipulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            </div>
+                        </div>
+                    `;
+                    box.appendChild(div);
+                    box.appendChild(this.gap(i+1));
+                });
+                
+                this.renderErrors(errors, warnings);
+            },
+            
+            renderErrors(errors, warnings) {
+                const container = document.getElementById('errorContainer');
+                let html = '';
+                
+                if (errors.length > 0) {
+                    html += `<div class="error-box mt-3">${errors.map(e => `<div class="error-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${e.msg}</span></div>`).join('')}</div>`;
+                }
+                
+                if (warnings.length > 0) {
+                    html += `<div class="warning-box mt-2">${warnings.map(e => `<div class="warning-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>${e.msg}</span></div>`).join('')}</div>`;
+                }
+                
+                container.innerHTML = html;
+            },
+            
+            gap(idx) {
+                const d = document.createElement('div');
+                d.className = 'insert-gap hidden sm:block';
+                d.innerHTML = '<div class="insert-line"></div><div class="insert-plus">+</div>';
+                d.onclick = () => this.add(idx);
+                return d;
+            },
+            
+            col(text) {
+                if (!text) return '';
+                
+                const colorMap = {
+                    '0': '#000000', '1': '#0000AA', '2': '#00AA00', '3': '#00AAAA',
+                    '4': '#AA0000', '5': '#AA00AA', '6': '#FFAA00', '7': '#AAAAAA',
+                    '8': '#555555', '9': '#5555FF', 'a': '#55FF55', 'b': '#55FFFF',
+                    'c': '#FF5555', 'd': '#FF55FF', 'e': '#FFFF55', 'f': '#FFFFFF',
+                    'g': '#DDD605', 'h': '#E3D4D1', 'i': '#CECACA', 'j': '#443A3B',
+                    'm': '#971607', 'n': '#B4684D', 'p': '#DEB12D', 'q': '#47A036',
+                    's': '#2CBAA8', 't': '#21497B', 'u': '#9A5CC6'
+                };
+                
+                text = text.replace(/\\n/g, '\n');
+                
+                let html = '';
+                let currentColor = '#FFFFFF';
+                let isBold = false;
+                let isItalic = false;
+                let isObfuscated = false;
+                let buffer = '';
+                
+                const flushBuffer = () => {
+                    if (buffer.length === 0) return;
+                    const styles = [`color:${currentColor}`];
+                    if (isBold) styles.push('font-weight:bold');
+                    if (isItalic) styles.push('font-style:italic');
+                    if (isObfuscated) styles.push('text-shadow:0 0 4px currentColor, 0 0 2px currentColor;opacity:0.9');
+                    html += `<span style="${styles.join(';')}">${this.esc(buffer)}</span>`;
+                    buffer = '';
+                };
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    
+                    if (char === '\n') {
+                        flushBuffer();
+                        html += '<br>';
+                        continue;
+                    }
+                    
+                    if (char === '§' && i + 1 < text.length) {
+                        const code = text[i + 1].toLowerCase();
+                        
+                        if (colorMap[code]) {
+                            flushBuffer();
+                            currentColor = colorMap[code];
+                            i++;
+                        } else if (code === 'l') {
+                            flushBuffer();
+                            isBold = true;
+                            i++;
+                        } else if (code === 'o') {
+                            flushBuffer();
+                            isItalic = true;
+                            i++;
+                        } else if (code === 'k') {
+                            flushBuffer();
+                            isObfuscated = true;
+                            i++;
+                        } else if (code === 'r') {
+                            flushBuffer();
+                            currentColor = '#FFFFFF';
+                            isBold = false;
+                            isItalic = false;
+                            isObfuscated = false;
+                            i++;
+                        } else {
+                            buffer += char;
+                        }
+                    } else {
+                        buffer += char;
+                    }
+                }
+                
+                flushBuffer();
+                return html;
+            },
+            
+            update() {
+                const raw = { rawtext: this.data };
+                const json = JSON.stringify(raw, null, 2);
+                document.getElementById('json').value = json;
+                
+                const type = document.getElementById('cmdType').value;
+                const target = document.getElementById('targetInput').value;
+                const pos = document.getElementById('titlePos').value;
+                
+                let cmd = type === 'tellraw' ? `/tellraw ${target} ${JSON.stringify(raw)}` : `/titleraw ${target} ${pos} ${JSON.stringify(raw)}`;
+                document.getElementById('cmd').value = cmd;
+                document.getElementById('len').textContent = cmd.length + ' chars';
+                document.getElementById('mode').textContent = type === 'titleraw' ? `titleraw ${pos}` : 'tellraw';
+                
+                let html = '';
+                this.data.forEach(el => {
+                    if (el.text) html += this.col(el.text);
+                    else if (el.selector) html += `<span style="color:#55FFFF">[${el.selector}]</span>`;
+                    else if (el.score) html += `<span style="color:#FFAA00">0</span>`;
+                    else if (el.translate) html += `<span style="color:#55FF55">{${el.translate}}</span>`;
+                    else html += `<span style="color:#FF5555">[错误]</span>`;
+                });
+                document.getElementById('preview').innerHTML = html || '<span style="color:#AAAAAA">preview</span>';
+                
+                const { errors, warnings } = this.validate();
+                this.renderErrors(errors, warnings);
+            },
+            
+            esc(t) { 
+                const d = document.createElement('div'); 
+                d.textContent = t; 
+                return d.innerHTML;
+            },
+            
+            format() { try { const j = JSON.parse(document.getElementById('json').value); document.getElementById('json').value = JSON.stringify(j, null, 2); } catch(e) { alert('格式错误'); } },
+            minify() { try { const j = JSON.parse(document.getElementById('json').value); document.getElementById('json').value = JSON.stringify(j); } catch(e) { alert('格式错误'); } },
+            
+            copyCommand() {
+                const c = document.getElementById('cmd');
+                c.select();
+                document.execCommand('copy');
+                const btn = document.getElementById('copyBtn');
+                const originalHTML = btn.innerHTML;
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>已复制</span>';
+                setTimeout(() => {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-primary');
+                    btn.innerHTML = originalHTML;
+                }, 1500);
+            },
+            
+            clearAll() {
+                if (this.data.length && confirm(`清空 ${this.data.length} 个元素?`)) {
+                    this.data = [];
+                    this.render();
+                    this.update();
+                }
+            },
+            
+            loadExample() {
+                this.data = [
+                    { text: "§e欢迎, " },
+                    { selector: "@p" },
+                    { text: " §7| 金币: " },
+                    { score: { name: "*", objective: "coin" } }
+                ];
+                document.getElementById('cmdType').value = 'titleraw';
+                document.getElementById('titlePos').value = 'actionbar';
+                this.toggleTitle();
+                this.render();
+                this.update();
+            }
+        };
+        
+        app.init();
+        
+        // 键盘快捷键支持
+        document.addEventListener('keydown', (e) => {
+            // ESC 关闭弹窗
+            if (e.key === 'Escape') {
+                if (!document.getElementById('editModal').classList.contains('hidden')) app.closeEdit();
+                else if (!document.getElementById('colorModal').classList.contains('hidden')) app.closeColorTable();
+                else if (!document.getElementById('importModal').classList.contains('hidden')) app.closeImport();
+            }
+        });
+    </script>
+</body>
+</html>
